@@ -40,11 +40,17 @@
      text ke liye kaafi gehre nahi hote, aur --primary yahan 33 jagah TEXT ki
      tarah use hota hai. "New Client Copy" is block ko client ke logo ke rang se
      dobara likhta hai — isliye markers hataana mat. */
-  --primary:#9e6400;          --primary-foreground:#fafafa;
-  --accent:#fcf1de;           --accent-foreground:#7a4e00;
-  --ring:#9e6400;
-  --sidebar-primary:#ffa200;  --sidebar-primary-bg:rgba(255,162,0,.20);
-  --brand-rgb:255,162,0;      --brand-deep:#9e6400;
+  /* Light me --primary gold NAHI, ink hai. Logo do hi rang ka hai — kaala aur
+     safed — aur gold usme hai hi nahi; wo accent ki tarah aaya hai. Gold ko
+     button fill banate to #fafafa foreground ke liye use itna gehra karna
+     padta (#896e1b) ki wo gold lagta hi nahi, bhoora dikhta. Isliye: bhari
+     cheezein (button, text) ink, aur brand ki pehchan accent/ring/sidebar se.
+     Ink par white text 16.97:1 deta hai, white par ink text 17.72:1. */
+  --primary:#18181b;          --primary-foreground:#fafafa;
+  --accent:#f9f3e1;           --accent-foreground:#6b5615;
+  --ring:#6b5615;
+  --sidebar-primary:#d6ac29;  --sidebar-primary-bg:rgba(201,162,39,.20);
+  --brand-rgb:201,162,39;     --brand-deep:#896e1b;
   /* brand-color:end */
 
   --radius:.75rem;
@@ -76,11 +82,13 @@
   --sidebar-accent:rgba(255,255,255,.06);
 
   /* brand-color:start — dark theme (upar wale light block jaisa hi niyam) */
-  --primary:#eb9500;          --primary-foreground:#0a0a0a;
-  --accent:#2f230e;           --accent-foreground:#ffab1a;
-  --ring:#eb9500;
-  --sidebar-primary:#ffa200;  --sidebar-primary-bg:rgba(255,162,0,.20);
-  --brand-rgb:255,162,0;      --brand-deep:#9e6400;
+  /* Dark me ulta: yahan ink dikhta hi nahi, isliye gold hi --primary hai.
+     Card (#131416) par 8.77:1, aur gold button par #0a0a0a text 9.42:1. */
+  --primary:#d4af37;          --primary-foreground:#0a0a0a;
+  --accent:#2f270e;           --accent-foreground:#dab43f;
+  --ring:#d4af37;
+  --sidebar-primary:#d6ac29;  --sidebar-primary-bg:rgba(201,162,39,.20);
+  --brand-rgb:201,162,39;     --brand-deep:#896e1b;
   /* brand-color:end */
 
   --shadow-xs:0 1px 2px rgba(0,0,0,.5);

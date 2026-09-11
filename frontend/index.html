@@ -32,10 +32,10 @@
     --destructive:#e40014;
     --border:#e5e5e5;     --input:#e5e5e5;
     /* brand-color:start — app.html jaisa hi; lib/brand-palette.js se derive */
-    --primary:#9e6400;    --primary-foreground:#fafafa;
-    --accent:#fcf1de;     --accent-foreground:#7a4e00;
-    --ring:#9e6400;
-    --brand-rgb:255,162,0; --brand-deep:#9e6400;
+    --primary:#18181b;    --primary-foreground:#fafafa;
+    --accent:#f9f3e1;     --accent-foreground:#6b5615;
+    --ring:#6b5615;
+    --brand-rgb:201,162,39; --brand-deep:#896e1b;
     /* brand-color:end */
     --radius:.75rem;
     --shadow-lg:0 12px 32px -8px rgba(10,10,10,.16);
@@ -48,14 +48,20 @@
        bhoore dikhte the. --brand-rgb asli brand rang hai. */
     /* animation:start */
     --mascot-1:rgb(var(--brand-rgb));
-    --mascot-2:color-mix(in srgb,rgb(var(--brand-rgb)) 60%,#fff);
+    --mascot-2:color-mix(in srgb,rgb(var(--brand-rgb)) 55%,#fff);
     /* Pehle ye --brand-deep ki taraf mila tha, par wo base rang ke itna paas
        hota hai ki dono mascot ek jaise dikhte the (green par #06984c banaam
        #06944a — nazar se farak hi nahi pata chalta tha). Ab seedha kaale ki
        taraf, taaki teen saaf alag shade banein: halka, base, gehra.
        Kaala theme se nahi badalta, isliye dark mode me bhi ye panel se
        ubhra hua hi rehta hai. */
-    --mascot-3:color-mix(in srgb,rgb(var(--brand-rgb)) 70%,#000);
+    --mascot-3:color-mix(in srgb,rgb(var(--brand-rgb)) 80%,#000);
+    /* Chautha jaan-boojh kar neutral hai — chaaron gold hote to group flat
+       dikhta. Pehle ye SVG me #2E2A26 (charcoal) hardcoded tha, jo tab theek
+       tha jab panel halka champagne rehta tha. Panel ab logo jaisa gehra hai,
+       wahan charcoal doob jaata — isliye warm light grey. Panel (#141416) par
+       ye 7.18:1 deta hai, aur teeno gold shades bhi 5:1 se upar hain. */
+    --mascot-4:#a8a194;
     /* animation:end */
   }
   [data-theme="dark"]{
@@ -65,10 +71,10 @@
     --destructive:#ff6568;
     --border:rgba(255,255,255,.10); --input:rgba(255,255,255,.15);
     /* brand-color:start — dark theme */
-    --primary:#eb9500;    --primary-foreground:#0a0a0a;
-    --accent:#2f230e;     --accent-foreground:#ffab1a;
-    --ring:#eb9500;
-    --brand-rgb:255,162,0; --brand-deep:#9e6400;
+    --primary:#d4af37;    --primary-foreground:#0a0a0a;
+    --accent:#2f270e;     --accent-foreground:#dab43f;
+    --ring:#d4af37;
+    --brand-rgb:201,162,39; --brand-deep:#896e1b;
     /* brand-color:end */
     --shadow-lg:0 12px 32px -8px rgba(0,0,0,.7);
     --shadow-xl:0 24px 64px -12px rgba(0,0,0,.8);
@@ -376,9 +382,9 @@
        aankh/mooh cross-fade karta hai, jo <img> ke andar pahunch me nahi
        aate. aria-hidden kyunki ye sirf sajaawat hai. -->
     <svg class="mascots" viewBox="0 0 420 274" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <ellipse cx="205" cy="256" rx="186" ry="12" fill="#1e293b" opacity=".07"/>
+    <ellipse cx="205" cy="256" rx="186" ry="12" fill="#ffffff" opacity=".06"/>
     
-    <!-- Tall amber block -->
+    <!-- Tall gold block -->
     <g class="mascot mascot--1">
       <g class="turn">
         <rect x="118" y="68" width="98" height="182" rx="18" fill="var(--mascot-1, #F39C12)"/>
@@ -397,26 +403,26 @@
       </g>
     </g>
     
-    <!-- Charcoal block -->
+    <!-- Neutral warm-grey block -->
     <g class="mascot mascot--2">
       <g class="turn">
-        <rect x="206" y="104" width="86" height="146" rx="10" fill="#2E2A26"/>
+        <rect x="206" y="104" width="86" height="146" rx="10" fill="var(--mascot-4, #2E2A26)"/>
         <g class="eye-open">
           <circle cx="228" cy="146" r="9" fill="#fff"/>
           <circle class="pupil" cx="228" cy="146" r="4.5" fill="#2E2A26"/>
           <circle cx="270" cy="146" r="9" fill="#fff"/>
           <circle class="pupil" cx="270" cy="146" r="4.5" fill="#2E2A26"/>
         </g>
-        <g class="eye-lid" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none">
+        <g class="eye-lid" stroke="#2E2A26" stroke-width="3.5" stroke-linecap="round" fill="none">
           <path d="M221 148 q7 -8 14 0"/>
           <path d="M263 148 q7 -8 14 0"/>
         </g>
-        <path class="mouth-happy" d="M240 172 q9 8 18 0" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
-        <path class="mouth-upset" d="M240 176 q9 -8 18 0" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <path class="mouth-happy" d="M240 172 q9 8 18 0" stroke="#2E2A26" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <path class="mouth-upset" d="M240 176 q9 -8 18 0" stroke="#2E2A26" stroke-width="3.5" stroke-linecap="round" fill="none"/>
       </g>
     </g>
     
-    <!-- Golden dome-top block -->
+    <!-- Pale champagne dome-top block -->
     <g class="mascot mascot--3">
       <g class="turn">
         <path d="M282 250 V182 a46 46 0 0 1 92 0 V250 Z" fill="var(--mascot-2, #FFC145)"/>
@@ -435,7 +441,7 @@
       </g>
     </g>
     
-    <!-- Orange dome, front left -->
+    <!-- Deep gold dome, front left -->
     <g class="mascot mascot--4">
       <g class="turn">
         <path d="M18 250 a78 78 0 0 1 156 0 Z" fill="var(--mascot-3, #FF8A3D)"/>

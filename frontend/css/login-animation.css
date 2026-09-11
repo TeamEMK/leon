@@ -38,15 +38,17 @@
        2. upar se neeche gehra hota gradient, jo flat rang se zyada gehrai deta
      Pehle yahan teen drifting orbs the — poore page par theek the, par panel
      ke andar wo dhabbon jaise dikhte the.
-     Dono parat --background ke saath mix hoti hain, isliye ek hi rule light
-     aur dark dono me theek baithta hai. */
+     Panel jaan-boojh kar DONO themes me gehra hai — pehle ye --background ke
+     saath mix hota tha, to light mode me halka champagne ban jaata tha. Logo
+     khud kaale tile par safed hai, aur ye panel usi ka bada roop hai: gehra
+     ink, upar gold ka narm spotlight. Isi wajah se mascots ke shades bhi
+     index.html me dobara chune gaye (charcoal wala ab warm grey hai, warna
+     gehre panel par doob jaata). */
   background:
     radial-gradient(ellipse 60% 46% at 50% 64%,
-      color-mix(in srgb,rgb(var(--brand-rgb)) 30%,var(--background)),
+      color-mix(in srgb,rgb(var(--brand-rgb)) 22%,#141416),
       transparent 72%),
-    linear-gradient(180deg,
-      color-mix(in srgb,rgb(var(--brand-rgb)) 7%,var(--background)),
-      color-mix(in srgb,rgb(var(--brand-rgb)) 25%,var(--background)));
+    linear-gradient(180deg,#0d0d0f,#1a1a1d);
 }
 
 .form-panel{
