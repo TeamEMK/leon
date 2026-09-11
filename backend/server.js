@@ -50,6 +50,12 @@ const db = require('../data/db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Railway (aur koi bhi managed host) TLS apne edge par khatam karta hai aur
+// container tak request plain HTTP me aati hai. Bina 'trust proxy' ke Express
+// req.protocol ko hamesha 'http' aur req.ip ko proxy ka IP maanta hai. Ek hop
+// (1) isliye — Railway ke aage sirf uska apna router hota hai.
+app.set('trust proxy', 1);
+
 // Proof-of-work photos base64 me aati hain — default 100kb limit kam padta hai
 app.use(express.json({ limit: '12mb' }));
 app.use(express.urlencoded({ extended: true, limit: '12mb' }));
@@ -4348,7 +4354,10 @@ app.use((err, req, res, next) => {
 // deta hai (api/index.js `app` ko wahan pass karta hai). listen() wahan
 // bekaar bhi hai aur cold start ko dheema bhi karta hai.
 if (!IS_SERVERLESS) {
-  app.listen(PORT, () => {
+  // 0.0.0.0 — container ke bahar se reachable hona zaroori hai. Node ka
+  // default bhi yahi hai, par Railway par ye chup-chaap toot jaye to debug
+  // karna mushkil hota hai, isliye likha hua rakha hai.
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n  ✦ ${BRAND.short}: http://localhost:${PORT}\n`);
   });
 }

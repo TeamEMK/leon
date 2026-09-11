@@ -1,0 +1,16 @@
+# Sirf `railway up` (CLI se direct upload) ke liye. GitHub se deploy karne par
+# Railway .gitignore hi dekhta hai.
+node_modules
+.git
+.env
+.env.local
+credentials.json
+apps_script_proof_upload.gs
+creds
+.vercel
+
+# DB dumps na jaayein — par migrations code ka hissa hain (inke bina
+# preDeployCommand par `npm run db:migrate` ke paas chalane ko kuch hota hi
+# nahi). `**` zaroori hai: files data/migrations/postgres/ me hain, do level gehri.
+*.sql
+!data/migrations/**/*.sql
