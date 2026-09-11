@@ -1,0 +1,17 @@
+-- FMS extra-input columns ko sheet ke column shift se bachao.
+--
+-- fms_steps ke plan/actual/delay/doer columns pehle se naam ke saath store hote
+-- hain (plan_col_name waghairah) aur padhte waqt naam se current position par
+-- heal ho jaate hain — lib/sheet-cols.js dekho. fms_extra_rows me ye naam tha
+-- hi nahi: wahan sirf col_letter padi thi.
+--
+-- Nateeja: client ne sheet me beech me ek column jod diya, to har extra input
+-- ek column baayein khisak gaya. Padhne me galat value dikhti thi, aur likhne
+-- me — "Done" karte waqt ya row ke fields update karte waqt — data GALAT column
+-- me chala jaata tha. Likhne wali galti chupi rehti thi kyunki koi error nahi
+-- aata, bas doosre column ki value overwrite ho jaati thi.
+--
+-- Ab naam bhi rakhte hain. Purani rows me ye NULL rahega; un par heal skip ho
+-- jaata hai aur letter jyon ka tyon chalta rehta hai (pehle jaisa vyavhaar),
+-- aur FMS agli baar save hone par naam apne aap bhar jaata hai.
+ALTER TABLE fms_extra_rows ADD COLUMN IF NOT EXISTS col_name VARCHAR(255);
