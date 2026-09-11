@@ -23,3 +23,4 @@ apps_script_proof_upload.gs
 # Team ke Google service account JSON (local par). Ye kabhi commit nahi hone
 # chahiye; base64 banakar Vercel ke env vars me daali jaati hain.
 creds/
+Aman_credentails.json
