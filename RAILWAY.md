@@ -7,15 +7,57 @@ nahi padti.
 
 Repo: `https://github.com/TeamEMK/leon`
 
+**Abhi live setup (11 Sep 2026):**
+
+| | |
+|---|---|
+| Railway project | `system leon` (`70a43ab3-8451-4874-ad70-2deb484827f9`) |
+| Services | `leon` (app), `Postgres` |
+| URL | https://leon-production-82b1.up.railway.app |
+| Database | 29 tables, 5 migrations lagi hui |
+
+Abhi tak set: `DB_KIND`, `DATABASE_URL`, `NODE_ENV`, `TZ`, `APP_URL`,
+`SESSION_SECRET`. Baaki (SMTP, WhatsApp, Google) abhi khaali hain — wo features
+band hain, app chalti hai.
+
 ---
 
 ## 1. Project aur database
 
 1. [railway.com](https://railway.com) → **New Project** → **Deploy from GitHub repo**
-   → `TeamEMK/leon` chuno. Railway `railway.json` khud padh lega.
+   → `TeamEMK/leon` chuno.
 2. Usi project (canvas) me **New** → **Database** → **Add PostgreSQL**.
 
 Ab project me do service hain: app aur Postgres.
+
+## 1.5. Deploy settings — haath se bharni padengi
+
+Repo me `railway.json` hai, par **Railway use apply nahi kar raha** (11 Sep 2026
+ko `railway config plan` par service ke `deploy.preDeployCommand`,
+`healthcheckPath`, `startCommand` teenon `null` nikle, aur runtime logs me
+nixpacks ka default `npm start` chal raha tha — `railway.json` ka
+`node backend/server.js` nahi). Railway config-as-code ko deprecate kar raha hai
+(CLI khud bolta hai: "Existing files keep working until 2026-12-01").
+
+Isliye app service → **Settings → Deploy** me ye do field khud bharo:
+
+| Field | Value |
+|---|---|
+| Pre-deploy Command | `npm run db:migrate` |
+| Healthcheck Path | `/api/health` |
+
+Pre-deploy wali line hi wo cheez hai jo har deploy par schema chadhati hai.
+Bina iske naye environment par tables banti hi nahi — aur app boot par aadha
+schema khud bana deti hai, jo aage jaakar migration todta hai (section 4 dekho).
+
+**Replicas 1 hi rakhna** — wajah section 6 me hai.
+
+`railway.json` repo me isliye chhodi hai ki Railway kabhi use padhne lage to
+sahi values wahin likhi hain. Uska IaC wala naya tarika (`.railway/railway.ts`)
+abhi is project ke liye theek nahi baithta: uska model "file hi poora sach hai"
+hai, yaani `apply` karte hi wo sab variables aur GitHub source connection uda
+deta hai jo file me likhe nahi — aur unhe file me likhne ka matlab hota
+`SESSION_SECRET` repo me daalna.
 
 ## 2. Environment variables
 
@@ -25,13 +67,18 @@ App service → **Variables** tab. Ye bharo:
 |---|---|---|
 | `DB_KIND` | `postgres` | driver chunav |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | Railway ka reference — type karke mat likho, "Add Reference" se lo |
-| `PGSSL_DISABLE` | `true` | private network (`postgres.railway.internal`) par TLS nahi hota |
 | `NODE_ENV` | `production` | login cookie `Secure` tabhi lagti hai |
 | `TZ` | `Asia/Kolkata` | **neeche section 5 padho — bina iske 12 PM wale email 5:30 PM ko jaate hain** |
 | `SESSION_SECRET` | koi lamba random string | JWT isi se sign hota hai |
 | `APP_URL` | `https://<tumhara-domain>` | emails me "Open app" link |
 | `ADMIN_EMAIL` | pehle admin ka email | seed script ke liye |
 | `ADMIN_PASSWORD` | strong password | seed script ke liye |
+
+Railway ka Postgres `postgres-ssl` image use karta hai, isliye private network
+par bhi TLS chalta hai — `PGSSL_DISABLE` set karne ki zarurat nahi. App khud
+`rejectUnauthorized: false` lagati hai, jo self-signed cert ke liye chahiye hota
+hai. Sirf agar kabhi "server does not support SSL connections" aaye tabhi
+`PGSSL_DISABLE=true` daalna.
 
 Baaki optional (feature band rehta hai agar na do) — `.env.example` me poori list hai:
 `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_NAME` (reminder emails),
@@ -50,26 +97,72 @@ theek hai kyunki wahi kaam in-process scheduler kar raha hota hai.
 App service → **Settings** → **Networking** → **Generate Domain**.
 Jo URL mile wahi `APP_URL` me daalo aur redeploy karo.
 
-## 4. Pehla admin banao
+## 4. Migrations aur pehla admin
 
-Migrations apne aap chalti hain — `railway.json` me `preDeployCommand` har deploy
-se pehle `npm run db:migrate` chalata hai (pehle se lagi migrations skip ho jaati
-hain, isliye baar-baar chalna safe hai).
+### Pehle migrations, phir app ka pehla boot
 
-Admin sirf ek baar banana hai. Railway CLI se:
+Ye kram ulta pad jaye to migration fail hoti hai. Wajah: `server.js` boot par
+khud kuch tables bana deta hai (`FMS schema ready`, `Queries table ready`) —
+`CREATE TABLE IF NOT EXISTS` se. Par `001_init.sql` me plain `CREATE TABLE` hai.
+To agar app pehle boot ho gayi, migration `relation "fms_extra_rows" already
+exists` par ruk jaati hai aur `users` jaisi asli tables banti hi nahi.
+
+Sahi kram:
+
+1. Pehle Variables bharo (section 2) — khaas kar `DATABASE_URL`.
+2. Pre-deploy Command set karo (section 1.5). Deploy par migration khud chalegi.
+3. Uske baad app boot hogi to uska schema setup no-op ho jayega.
+
+Agar app pehle hi boot ho chuki hai aur migration atak rahi hai, to un khaali
+auto-bani tables ko hatana padta hai. **Pehle count check karo** — 0 rows hon
+tabhi:
+
+```sql
+DROP TABLE IF EXISTS fms_extra_rows, fms_sheets, fms_step_doers,
+                     fms_steps, queries, schema_migrations CASCADE;
+```
+
+Phir migration chalao. Theek chalne par 29 tables banti hain.
+
+### Migration haath se chalani ho (tunnel se)
+
+Database ka `DATABASE_URL` private domain (`postgres.railway.internal`) par hota
+hai — laptop se reachable nahi. Public Access on kiye bina Railway ka encrypted
+tunnel use karo:
 
 ```bash
 npm i -g @railway/cli
 railway login
-railway link          # project + app service chuno
-railway run npm run db:seed-admin
+railway link -p <project-id> -e production -s leon
+
+ssh-keygen -t ed25519            # sirf pehli baar
+railway ssh keys add             # key Railway account par register karo
+
+railway connect Postgres --tunnel-only
 ```
 
-CLI na chahiye to app service ke **Settings → Deploy → Custom Start Command** me
-ek baar `npm run db:seed-admin && node backend/server.js` rakh kar deploy karo,
-phir wapas hata do.
+Aakhri command `127.0.0.1:<port>` par tunnel kholti hai aur poora URL print
+karti hai. Use alag terminal me chalne do, aur dusre me:
 
-Ab `https://<domain>` par `ADMIN_EMAIL` / `ADMIN_PASSWORD` se login ho jayega.
+```bash
+DB_KIND=postgres DATABASE_URL="<tunnel-url>" npm run db:migrate
+```
+
+Windows note: `railway ssh keys add -k <path>` "Key not found" deta hai. Bina
+`-k` ke chalao — auto-detect kaam karta hai.
+
+### Pehla admin
+
+`railway run npm run db:seed-admin` **kaam nahi karega** — `railway run` command
+local machine par chalati hai, aur wahan private `DATABASE_URL` reachable nahi
+hai. Tunnel khula rakh kar ye chalao:
+
+```bash
+ADMIN_EMAIL=you@company.com ADMIN_PASSWORD=<strong>   DB_KIND=postgres DATABASE_URL="<tunnel-url>" npm run db:seed-admin
+```
+
+Ab `https://<domain>` par usi email/password se login ho jayega. Dobara chalane
+par maujooda admin ka password reset ho jaata hai.
 
 ## 5. Timezone — ye wala step chhodna mat
 
@@ -86,7 +179,7 @@ padhne layak ho jaate hain.
 
 ## 6. Replicas 1 hi rakhna
 
-`railway.json` me `numReplicas: 1` jaan-boojh kar hai.
+App service → **Settings → Deploy → Replicas** ko 1 par hi rehne do.
 
 WhatsApp pass to do replicas par bhi safe hai — `_claimDay()` ek atomic UPDATE se
 din claim karta hai, duplicate nahi jaate. Par email reminder ka "aaj chal chuka"
@@ -113,13 +206,22 @@ Jo credentials nahi diye, unke liye `⚠️ … skipped` aayega — wo normal ha
 
 ## 8. Aam dikkatein
 
+**migration par `relation "..." already exists`** — app migration se pehle boot
+ho gayi thi aur usne kuch tables khud bana di. Section 4 dekho.
+
+**Tables banti hi nahi, deploy fir bhi SUCCESS** — Pre-deploy Command set nahi
+hai. Section 1.5 dekho; `railway.json` par bharosa mat karo.
+
 **`SASL: client password must be a string`** — `DATABASE_URL` khaali hai ya
 reference theek se nahi juda. Variables me jaake dobara "Add Reference" se lo.
 
-**`The server does not support SSL connections`** — `PGSSL_DISABLE=true` set karo.
+**`The server does not support SSL connections`** — database bina SSL wale image
+par hai; tab `PGSSL_DISABLE=true` set karo. Railway ke default `postgres-ssl`
+image par ye nahi aana chahiye.
 
-**`self signed certificate`** — public proxy URL (`…proxy.rlwy.net`) use ho raha
-hai; wahan `PGSSL_DISABLE` hata do (app khud `rejectUnauthorized: false` lagati hai).
+**`self signed certificate`** — `PGSSL_DISABLE` hata do. App khud
+`rejectUnauthorized: false` lagati hai, jo Railway ke self-signed cert ke liye
+sahi hai.
 
 **Healthcheck fail, par logs me koi error nahi** — port par kuch aur baitha hai ya
 listen fail hua. Note: `server.js` ka `uncaughtException` handler crash ko sirf
