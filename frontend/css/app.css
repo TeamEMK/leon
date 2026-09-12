@@ -5,52 +5,55 @@
    fayda: browser ise cache kar leta hai, jabki app.html har baar poora
    aata hai.
 
-   Neeche do marker-blocks hain jinke beech ke tokens "New Client Copy"
-   client ke rang se dobara likhta hai. Pehla block light theme ka, doosra
-   dark ka — kram badalna mat.
+   Neeche ek marker-block hai jiske andar ke tokens "New Client Copy"
+   client ke rang se dobara likhta hai. (Pehle light aur dark dono theme ke
+   liye alag block the — dark mode ab hata diya gaya hai, ab sirf ek pastel
+   theme chalta hai.)
    (Marker ka naam yahan jaan-boojh kar nahi likha: use likh dene se ye
     comment khud ek jhootha marker ban jaata.)
 */
 
 /* ══════════════════════════════════════════════════════════════
-   DESIGN TOKENS — Analytics Dashboard design system
-   Light + dark. Brand primary red rakha hai (logo se match).
-   Blue chahiye to sirf --primary / --ring / --sidebar-primary badlo.
+   DESIGN TOKENS — Pastel (light pink + mint) design system
+   Ab sirf ek theme hai — dark mode hata diya gaya, kyunki pastel look
+   sirf light surfaces par kaam karta hai. Shades yahan bhi contrast se
+   chune gaye hain (lib/brand-palette.js ke contrast() se test kiya),
+   sirf ab hue pink/mint family se hai, gold/ink se nahi.
 ══════════════════════════════════════════════════════════════ */
 :root{
-  --background:#fdfdfd;   --foreground:#0a0a0a;
-  --card:#ffffff;         --card-foreground:#0a0a0a;
-  --popover:#ffffff;      --popover-foreground:#0a0a0a;
-  --secondary:#f5f5f5;    --secondary-foreground:#171717;
-  --muted:#f5f5f5;        --muted-foreground:#737373;
-  --destructive:#e40014;  --destructive-foreground:#fafafa;
-  --success:#00a151;      --warning:#f0a133;  --info:#3061ef;
-  --border:#e5e5e5;       --input:#e5e5e5;
+  --background:#fdf5f3;   --foreground:#3b2e33;
+  --card:#ffffff;         --card-foreground:#3b2e33;
+  --popover:#ffffff;      --popover-foreground:#3b2e33;
+  --secondary:#fceae7;    --secondary-foreground:#3b2e33;
+  --muted:#e3f2ee;        --muted-foreground:#936c75;
+  --destructive:#d33b22;  --destructive-foreground:#ffffff;
+  --success:#27826d;      --warning:#e7a951;  --info:#6656c2;
+  --border:#f3dcd9;       --input:#f0d2cd;
 
-  --chart-1:#3b6df4; --chart-2:#00a16f; --chart-3:#ed990e;
-  --chart-4:#ec305a; --chart-5:#009fc2;
+  --chart-1:#dc2d4f; --chart-2:#27826d; --chart-3:#f2a65a;
+  --chart-4:#9b81da; --chart-5:#1e7eae;
+  /* chart-5 doosre chart-N se gehra hai jaan-boojh kar: ye role-badge.pc me
+     seedha TEXT ki tarah bhi use hota hai (white background par), aur pastel
+     sky-blue us par AA (4.5:1) fail karta tha. */
 
-  --sidebar:#0e0f12;          --sidebar-foreground:#fafafa;
-  --sidebar-muted:#8c8f95;    --sidebar-border:rgba(255,255,255,.10);
-  --sidebar-accent:rgba(255,255,255,.06);
+  /* Sidebar ab bhi pastel/light hai, poore app ke saath (pehle hamesha
+     dark thi, theme se alag). Ek halki pink surface — main content ke
+     off-white/cream background se thodi gehri, taaki border ke bina bhi
+     do zone alag dikhein. */
+  --sidebar:#fadce0;          --sidebar-foreground:#3b2e33;
+  --sidebar-muted:#845862;    --sidebar-border:#f3c6ce;
+  --sidebar-accent:rgba(255,255,255,.55);
 
   /* brand-color:start
-     brand.json ke "color" (logo ka rang) se nikle hue tokens — lib/brand-palette.js.
-     Shades contrast se chune jaate hain, fix nahi: bahut se logo ke rang seedha
-     text ke liye kaafi gehre nahi hote, aur --primary yahan 33 jagah TEXT ki
-     tarah use hota hai. "New Client Copy" is block ko client ke logo ke rang se
-     dobara likhta hai — isliye markers hataana mat. */
-  /* Light me --primary gold NAHI, ink hai. Logo do hi rang ka hai — kaala aur
-     safed — aur gold usme hai hi nahi; wo accent ki tarah aaya hai. Gold ko
-     button fill banate to #fafafa foreground ke liye use itna gehra karna
-     padta (#896e1b) ki wo gold lagta hi nahi, bhoora dikhta. Isliye: bhari
-     cheezein (button, text) ink, aur brand ki pehchan accent/ring/sidebar se.
-     Ink par white text 16.97:1 deta hai, white par ink text 17.72:1. */
-  --primary:#18181b;          --primary-foreground:#fafafa;
-  --accent:#f9f3e1;           --accent-foreground:#6b5615;
-  --ring:#6b5615;
-  --sidebar-primary:#d6ac29;  --sidebar-primary-bg:rgba(201,162,39,.20);
-  --brand-rgb:201,162,39;     --brand-deep:#896e1b;
+     brand.json ke "color" (logo ka rang, ab pastel pink) se nikle hue
+     tokens — lib/brand-palette.js. Shades contrast se chune jaate hain:
+     pink seedha text/button ke liye kaafi gehra nahi hota, isliye
+     lightness ghumake AA (4.5:1+) pura kiya gaya hai. */
+  --primary:#dc2d4f;          --primary-foreground:#ffffff;
+  --accent:#f9dce2;           --accent-foreground:#9d1a34;
+  --ring:#dc2d4f;
+  --sidebar-primary:#c0203f;  --sidebar-primary-bg:rgba(220,45,79,.18);
+  --brand-rgb:220,45,79;      --brand-deep:#9d1a34;
   /* brand-color:end */
 
   --radius:.75rem;
@@ -58,49 +61,15 @@
   --radius-md:calc(var(--radius) - 2px);
   --radius-lg:var(--radius);
 
-  --shadow-xs:0 1px 2px rgba(10,10,10,.05);
-  --shadow-sm:0 1px 3px rgba(10,10,10,.07),0 1px 2px -1px rgba(10,10,10,.07);
-  --shadow-md:0 4px 12px -2px rgba(10,10,10,.09),0 2px 6px -2px rgba(10,10,10,.06);
-  --shadow-lg:0 12px 32px -8px rgba(10,10,10,.16);
-  --shadow-xl:0 24px 64px -12px rgba(10,10,10,.22);
-}
-[data-theme="dark"]{
-  --background:#07080a;   --foreground:#fafafa;
-  --card:#131416;         --card-foreground:#fafafa;
-  --popover:#131416;      --popover-foreground:#fafafa;
-  --secondary:#1f2227;    --secondary-foreground:#fafafa;
-  --muted:#1f2227;        --muted-foreground:#8c8f95;
-  --destructive:#ff6568;  --destructive-foreground:#0a0a0a;
-  --success:#2cbb67;      --warning:#faab3f;  --info:#5486ff;
-  --border:rgba(255,255,255,.10); --input:rgba(255,255,255,.15);
-
-  --chart-1:#5386ff; --chart-2:#00bb87; --chart-3:#f7a224;
-  --chart-4:#ff4e6d; --chart-5:#09b7dc;
-
-  --sidebar:#0e0f12;          --sidebar-foreground:#fafafa;
-  --sidebar-muted:#8c8f95;    --sidebar-border:rgba(255,255,255,.10);
-  --sidebar-accent:rgba(255,255,255,.06);
-
-  /* brand-color:start — dark theme (upar wale light block jaisa hi niyam) */
-  /* Dark me ulta: yahan ink dikhta hi nahi, isliye gold hi --primary hai.
-     Card (#131416) par 8.77:1, aur gold button par #0a0a0a text 9.42:1. */
-  --primary:#d4af37;          --primary-foreground:#0a0a0a;
-  --accent:#2f270e;           --accent-foreground:#dab43f;
-  --ring:#d4af37;
-  --sidebar-primary:#d6ac29;  --sidebar-primary-bg:rgba(201,162,39,.20);
-  --brand-rgb:201,162,39;     --brand-deep:#896e1b;
-  /* brand-color:end */
-
-  --shadow-xs:0 1px 2px rgba(0,0,0,.5);
-  --shadow-sm:0 1px 3px rgba(0,0,0,.55),0 1px 2px -1px rgba(0,0,0,.5);
-  --shadow-md:0 4px 12px -2px rgba(0,0,0,.6),0 2px 6px -2px rgba(0,0,0,.5);
-  --shadow-lg:0 12px 32px -8px rgba(0,0,0,.7);
-  --shadow-xl:0 24px 64px -12px rgba(0,0,0,.8);
+  --shadow-xs:0 1px 2px rgba(59,46,51,.06);
+  --shadow-sm:0 1px 3px rgba(59,46,51,.08),0 1px 2px -1px rgba(59,46,51,.08);
+  --shadow-md:0 4px 12px -2px rgba(59,46,51,.10),0 2px 6px -2px rgba(59,46,51,.07);
+  --shadow-lg:0 12px 32px -8px rgba(59,46,51,.16);
+  --shadow-xl:0 24px 64px -12px rgba(59,46,51,.22);
 }
 
 *{margin:0;padding:0;box-sizing:border-box;}
 html{color-scheme:light;}
-[data-theme="dark"]{color-scheme:dark;}
 body{
   font-family:'Inter',system-ui,-apple-system,sans-serif;
   background:var(--background);color:var(--foreground);min-height:100vh;
@@ -211,10 +180,13 @@ body{
 .logout-btn{
   display:flex;align-items:center;gap:10px;padding:9px 11px;
   border-radius:var(--radius-md);cursor:pointer;font-size:13px;font-weight:500;
-  color:#ff8a8a;transition:background .15s,color .15s;width:100%;white-space:nowrap;
+  /* Sidebar ab halki pink hai (pehle near-black), isliye ye rang bhi usi
+     ke saamne 4.6:1 tak gehra kiya gaya — purana #ff8a8a dark sidebar ke
+     liye tha, halke gulabi par kho jaata. */
+  color:#b8341e;transition:background .15s,color .15s;width:100%;white-space:nowrap;
   background:none;border:none;font-family:inherit;
 }
-.logout-btn:hover{background:rgba(255,101,104,.12);color:#ffa5a5;}
+.logout-btn:hover{background:rgba(184,52,30,.14);color:#8f2817;}
 .logout-label{opacity:0;transition:opacity .2s .1s;}
 .sidebar:hover .logout-label{opacity:1;}
 
@@ -237,19 +209,6 @@ body{
 }
 .topbar-title{font-size:16px;font-weight:600;color:var(--foreground);letter-spacing:-.015em;}
 .topbar-right{display:flex;align-items:center;gap:8px;}
-
-/* Theme toggle */
-.theme-toggle{
-  width:34px;height:34px;display:grid;place-items:center;flex-shrink:0;
-  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);
-  color:var(--muted-foreground);cursor:pointer;transition:color .15s,background .15s,border-color .15s;
-}
-.theme-toggle:hover{color:var(--foreground);background:var(--secondary);border-color:var(--muted-foreground);}
-.theme-toggle svg{width:17px;height:17px;}
-.theme-toggle .icon-sun{display:none;}
-.theme-toggle .icon-moon{display:block;}
-[data-theme="dark"] .theme-toggle .icon-sun{display:block;}
-[data-theme="dark"] .theme-toggle .icon-moon{display:none;}
 
 /* ══════════════════════════════════════
    BUTTONS
@@ -513,28 +472,30 @@ input[type=date],input[type=time],input[type=datetime-local]{color-scheme:inheri
 .drag-handle{cursor:grab;color:var(--muted-foreground);font-size:16px;padding:0 4px;}
 .drag-handle:active{cursor:grabbing;}
 
-/* FMS Tasks Train */
-.fms-train-track{background:#0e0f12;border:1px solid var(--sidebar-border);border-radius:var(--radius-lg);padding:24px 0 36px;overflow:hidden;position:relative;margin-bottom:16px;}
-.fms-train-track::before{content:'';position:absolute;bottom:28px;left:0;right:0;height:5px;background:linear-gradient(90deg,#1f2227 0%,#3a3f47 20%,#1f2227 40%,#3a3f47 60%,#1f2227 80%,#3a3f47 100%);border-radius:3px;}
-.fms-train-track::after{content:'';position:absolute;bottom:24px;left:0;right:0;height:12px;background:repeating-linear-gradient(90deg,#2b2f36 0,#2b2f36 30px,transparent 30px,transparent 50px);opacity:.5;}
+/* FMS Tasks Train
+   Pehle ye track hamesha dark thi (poore theme se alag, hardcoded slate/charcoal).
+   Ab pastel — track mint, rail deep mint/teal, coaches white card jaisa,
+   apna coach brand pink me. */
+.fms-train-track{background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px 0 36px;overflow:hidden;position:relative;margin-bottom:16px;}
+.fms-train-track::before{content:'';position:absolute;bottom:28px;left:0;right:0;height:5px;background:linear-gradient(90deg,#27826d 0%,#53c6ac 20%,#27826d 40%,#53c6ac 60%,#27826d 80%,#53c6ac 100%);border-radius:3px;}
+.fms-train-track::after{content:'';position:absolute;bottom:24px;left:0;right:0;height:12px;background:repeating-linear-gradient(90deg,#1f6b59 0,#1f6b59 30px,transparent 30px,transparent 50px);opacity:.35;}
 .fms-train-scroll{display:flex;align-items:flex-end;gap:6px;padding:0 30px 14px;width:max-content;animation:trainScroll var(--train-dur,18s) linear infinite;}
 .fms-train-scroll:hover{animation-play-state:paused;}
 @keyframes trainScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-.fms-train-engine{flex-shrink:0;background:linear-gradient(135deg,#1f2227,#3a3f47);border:2px solid var(--primary);border-radius:10px 4px 4px 10px;padding:14px 18px;color:#fff;min-width:80px;text-align:center;font-size:24px;display:flex;flex-direction:column;align-items:center;position:relative;}
-.fms-train-engine::before,.fms-coach::before{content:'⬤';position:absolute;bottom:-14px;left:12px;color:#5a5f68;font-size:9px;}
-.fms-train-engine::after,.fms-coach::after{content:'⬤';position:absolute;bottom:-14px;right:12px;color:#5a5f68;font-size:9px;}
-.fms-coach{flex-shrink:0;border-radius:var(--radius-md);padding:12px 14px;color:#fff;min-width:160px;max-width:200px;cursor:pointer;position:relative;transition:transform .2s,box-shadow .2s;border:2px solid transparent;display:flex;flex-direction:column;gap:4px;background:#242a35;}
-.fms-coach:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(0,0,0,.5);}
+.fms-train-engine{flex-shrink:0;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 78%,#000));border:2px solid var(--primary);border-radius:10px 4px 4px 10px;padding:14px 18px;color:#fff;min-width:80px;text-align:center;font-size:24px;display:flex;flex-direction:column;align-items:center;position:relative;}
+.fms-train-engine::before,.fms-coach::before{content:'⬤';position:absolute;bottom:-14px;left:12px;color:#845862;font-size:9px;}
+.fms-train-engine::after,.fms-coach::after{content:'⬤';position:absolute;bottom:-14px;right:12px;color:#845862;font-size:9px;}
+.fms-coach{flex-shrink:0;border-radius:var(--radius-md);padding:12px 14px;color:var(--foreground);min-width:160px;max-width:200px;cursor:pointer;position:relative;transition:transform .2s,box-shadow .2s;border:2px solid var(--border);display:flex;flex-direction:column;gap:4px;background:var(--card);}
+.fms-coach:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg);}
 .fms-coach.active{border-color:var(--warning);box-shadow:0 0 0 3px color-mix(in srgb,var(--warning) 30%,transparent);transform:translateY(-6px);}
-.fms-coach.not-mine{background:#1f2227;opacity:.55;cursor:not-allowed;pointer-events:none;}
-/* Coach hamesha dark surface par hai aur uska text #fff hai, isliye yahan theme
-   token nahi chalta (dark mode me --primary bright amber ho jaata hai aur white
-   text usme dub jaata). Brand ka gehra amber, jis par white AA pass karta hai. */
-.fms-coach.mine{background:linear-gradient(135deg,var(--brand-deep),color-mix(in srgb,var(--brand-deep) 86%,#fff));}
+.fms-coach.not-mine{background:var(--secondary);color:var(--muted-foreground);opacity:.65;cursor:not-allowed;pointer-events:none;}
+/* Apna coach brand pink ke gradient me, white text — dono shade par
+   AA pass karta hai (--brand-deep hi is contrast ke liye chuna gaya tha). */
+.fms-coach.mine{background:linear-gradient(135deg,var(--brand-deep),color-mix(in srgb,var(--brand-deep) 86%,#fff));color:#fff;border-color:transparent;}
 .fms-coach-num{font-size:10px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.05em;}
 .fms-coach-name{font-size:12px;font-weight:700;line-height:1.3;word-break:break-word;}
 .fms-coach-doers{font-size:10px;opacity:.75;margin-top:2px;}
-.fms-coach-connector{width:20px;height:8px;background:#3a3f47;border-radius:2px;flex-shrink:0;align-self:flex-end;margin-bottom:14px;}
+.fms-coach-connector{width:20px;height:8px;background:#c98a95;border-radius:2px;flex-shrink:0;align-self:flex-end;margin-bottom:14px;}
 .fms-train-speed{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--secondary);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);font-size:12px;color:var(--muted-foreground);}
 .fms-train-speed input[type=range]{flex:1;accent-color:var(--primary);}
 .fms-step-rows-table{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;margin-top:4px;box-shadow:var(--shadow-xs);}

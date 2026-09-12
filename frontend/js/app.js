@@ -98,17 +98,15 @@ function renderDbmTable() {
 }
 
 // ══════════════════════════════════════════════════════
-// THEME (light / dark)
+// CHART THEME
 // ══════════════════════════════════════════════════════
-// Sab rang CSS variables se aate hain, isliye theme badalne par
-// poora UI apne aap badal jaata hai. Charts canvas hain — unhe
-// variables nahi milte, isliye value padh kar dubara draw karte hain.
+// Sab rang CSS variables se aate hain. Charts canvas hain — unhe
+// variables nahi milte, isliye value padh kar draw karte hain.
+// (Pehle yahan light/dark theme toggle bhi tha — pastel look hata
+// diya gaya, ab app hamesha ek hi theme me chalta hai.)
 function cssVar(name, fallback) {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return v || fallback || 'var(--muted-foreground)';
-}
-function currentTheme() {
-  return document.documentElement.getAttribute('data-theme') || 'light';
 }
 function applyChartTheme() {
   if (typeof Chart === 'undefined') return;
@@ -124,16 +122,6 @@ function applyChartTheme() {
   Chart.defaults.plugins.tooltip.cornerRadius    = 8;
   Chart.defaults.plugins.tooltip.displayColors   = true;
   Chart.defaults.plugins.tooltip.boxPadding      = 4;
-}
-function toggleTheme() {
-  const next = currentTheme() === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  try { localStorage.setItem('tm-theme', next); } catch (e) {}
-  applyChartTheme();
-  // Charts canvas par bane hote hain — theme ke naye rang lene ke liye redraw
-  if (typeof dashChartInst !== 'undefined' && dashChartInst) {
-    try { loadDashboard(); } catch (e) {}
-  }
 }
 applyChartTheme();
 

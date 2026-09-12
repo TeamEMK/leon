@@ -11,17 +11,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-/* Theme paint se pehle set karo, warna page load par white flash aayega */
+/* Sidebar pin state paint se pehle restore karo, warna load par ek jhalak
+   collapsed dikhti hai. (Dark/light theme toggle hata diya gaya hai — ab
+   app hamesha ek hi pastel theme me chalta hai.) */
 (function(){
   try{
-    // Default hamesha light — dark sirf tab jab user ne khud toggle kiya ho
-    var saved = localStorage.getItem('tm-theme');
-    document.documentElement.setAttribute('data-theme', saved === 'dark' ? 'dark' : 'light');
-    // Sidebar pin bhi yahin restore karo, warna load par ek jhalak collapsed dikhti hai
     if (localStorage.getItem('tm-sidebar-pinned') === '1') {
       document.documentElement.classList.add('sidebar-pinned');
     }
-  }catch(e){ document.documentElement.setAttribute('data-theme','light'); }
+  }catch(e){}
 })();
 </script>
 <link rel="stylesheet" href="/css/app.css"/>
@@ -57,8 +55,10 @@
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
       <span class="nav-label-text">Approvals</span>
       <span id="approvalBadge" style="display:none;position:absolute;top:6px;right:8px;background:var(--destructive);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center">0</span>
+      <!-- chart-5/warning tokens ab pastel (halke) hain, white text unke upar
+           AA fail karta — badge ke liye usi hue ka gehra shade hardcode kiya. -->
       <span id="transferBadge" style="display:none;position:absolute;top:6px;right:26px;background:var(--chart-5);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center">0</span>
-      <span id="leaveBadge" style="display:none;position:absolute;top:6px;right:44px;background:var(--warning);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center">0</span>
+      <span id="leaveBadge" style="display:none;position:absolute;top:6px;right:44px;background:#a16816;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center">0</span>
     </div>
     <div class="nav-item" id="nav-leaves" onclick="navigate('leaves',this)">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -119,13 +119,7 @@
       <div class="topbar-title" id="topbarTitle">Dashboard</div>
       <span class="viewonly-pill" title="You have view-only access">👁 View only</span>
     </div>
-    <div class="topbar-right" id="topbarActions">
-      <!-- Light / dark theme toggle -->
-      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark theme" aria-label="Toggle light or dark theme">
-        <svg class="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-        <svg class="icon-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-      </button>
-    </div>
+    <div class="topbar-right" id="topbarActions"></div>
   </div>
 
   <!-- ── DASHBOARD ── -->

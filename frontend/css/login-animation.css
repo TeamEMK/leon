@@ -33,22 +33,19 @@
   display:grid;
   place-items:center;
   padding:clamp(24px,4vw,64px);
-  /* Do parat:
-       1. mascots ke theek peeche ek narm spotlight, taaki wo panel se ubhrein
-       2. upar se neeche gehra hota gradient, jo flat rang se zyada gehrai deta
-     Pehle yahan teen drifting orbs the — poore page par theek the, par panel
-     ke andar wo dhabbon jaise dikhte the.
-     Panel jaan-boojh kar DONO themes me gehra hai — pehle ye --background ke
-     saath mix hota tha, to light mode me halka champagne ban jaata tha. Logo
-     khud kaale tile par safed hai, aur ye panel usi ka bada roop hai: gehra
-     ink, upar gold ka narm spotlight. Isi wajah se mascots ke shades bhi
-     index.html me dobara chune gaye (charcoal wala ab warm grey hai, warna
-     gehre panel par doob jaata). */
+  /* Do parat, pastel mockup (light pink + mint macarons) se seedha match:
+       1. mascots ke peeche mint ka narm glow — ekdum photo jaisa, jahan
+          mint macaron coral background par ubhar ke dikhta hai
+       2. upar se neeche coral-pink gradient, jo flat rang se zyada gehrai deta
+     Panel pehle gehra ink tha (dono theme me) — ab pastel theme ke saath
+     hamesha ye coral-pink hi rehta hai. Mascots par isi wajah se stroke
+     outline di gayi hai (index.html), taaki halka mascot bhi is pink par
+     ghule nahi. */
   background:
     radial-gradient(ellipse 60% 46% at 50% 64%,
-      color-mix(in srgb,rgb(var(--brand-rgb)) 22%,#141416),
+      color-mix(in srgb,#53c6ac 32%,#fbd9d3),
       transparent 72%),
-    linear-gradient(180deg,#0d0d0f,#1a1a1d);
+    linear-gradient(180deg,#fbd9d3,#f3a79c);
 }
 
 .form-panel{

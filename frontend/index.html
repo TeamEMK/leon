@@ -13,74 +13,42 @@
 <link rel="stylesheet" href="/css/login-animation.css"/>
 <script src="/js/login-animation.js" defer></script>
 <!-- animation:end -->
-<script>
-/* Theme paint se pehle set karo — app.html jaisa hi */
-(function(){
-  try{
-    // Default hamesha light — app.html jaisa hi
-    var saved = localStorage.getItem('tm-theme');
-    document.documentElement.setAttribute('data-theme', saved === 'dark' ? 'dark' : 'light');
-  }catch(e){ document.documentElement.setAttribute('data-theme','light'); }
-})();
-</script>
 <style>
-  /* Tokens app.html se same — dono pages ek jaise dikhein */
+  /* Tokens app.css se same pastel (pink + mint) palette — dono pages ek jaise
+     dikhein. Dark theme hata diya gaya hai, ab hamesha yahi ek theme chalta hai. */
   :root{
-    --background:#fdfdfd; --foreground:#0a0a0a;
-    --card:#ffffff;       --card-foreground:#0a0a0a;
-    --muted:#f5f5f5;      --muted-foreground:#737373;
-    --destructive:#e40014;
-    --border:#e5e5e5;     --input:#e5e5e5;
-    /* brand-color:start — app.html jaisa hi; lib/brand-palette.js se derive */
-    --primary:#18181b;    --primary-foreground:#fafafa;
-    --accent:#f9f3e1;     --accent-foreground:#6b5615;
-    --ring:#6b5615;
-    --brand-rgb:201,162,39; --brand-deep:#896e1b;
+    --background:#fdf5f3; --foreground:#3b2e33;
+    --card:#ffffff;       --card-foreground:#3b2e33;
+    --muted:#e3f2ee;      --muted-foreground:#936c75;
+    --destructive:#d33b22;
+    --border:#f3dcd9;     --input:#f0d2cd;
+    /* brand-color:start — app.css jaisa hi; lib/brand-palette.js se derive */
+    --primary:#dc2d4f;    --primary-foreground:#ffffff;
+    --accent:#f9dce2;     --accent-foreground:#9d1a34;
+    --ring:#dc2d4f;
+    --brand-rgb:220,45,79; --brand-deep:#9d1a34;
     /* brand-color:end */
     --radius:.75rem;
-    --shadow-lg:0 12px 32px -8px rgba(10,10,10,.16);
-    --shadow-xl:0 24px 64px -12px rgba(10,10,10,.22);
+    --shadow-lg:0 12px 32px -8px rgba(59,46,51,.16);
+    --shadow-xl:0 24px 64px -12px rgba(59,46,51,.22);
     /* Mascots ke body colours. Ye brand-color markers ke BAHAR hain kyunki
        inki apni koi value nahi — teeno brand ke token se bante hain, isliye
        har client ki copy me apne aap uske rang me aa jaate hain.
        Yahan --primary NAHI liya: wo button/text ke liye gehra kiya hua shade
-       hai (base amber #e69306 ka #9f6604), aur usse bane mascots matmaile
-       bhoore dikhte the. --brand-rgb asli brand rang hai. */
+       hai, aur usse bane mascots matmaile dikhte the. --brand-rgb asli
+       brand rang hai. */
     /* animation:start */
     --mascot-1:rgb(var(--brand-rgb));
     --mascot-2:color-mix(in srgb,rgb(var(--brand-rgb)) 55%,#fff);
-    /* Pehle ye --brand-deep ki taraf mila tha, par wo base rang ke itna paas
-       hota hai ki dono mascot ek jaise dikhte the (green par #06984c banaam
-       #06944a — nazar se farak hi nahi pata chalta tha). Ab seedha kaale ki
-       taraf, taaki teen saaf alag shade banein: halka, base, gehra.
-       Kaala theme se nahi badalta, isliye dark mode me bhi ye panel se
-       ubhra hua hi rehta hai. */
     --mascot-3:color-mix(in srgb,rgb(var(--brand-rgb)) 80%,#000);
-    /* Chautha jaan-boojh kar neutral hai — chaaron gold hote to group flat
-       dikhta. Pehle ye SVG me #2E2A26 (charcoal) hardcoded tha, jo tab theek
-       tha jab panel halka champagne rehta tha. Panel ab logo jaisa gehra hai,
-       wahan charcoal doob jaata — isliye warm light grey. Panel (#141416) par
-       ye 7.18:1 deta hai, aur teeno gold shades bhi 5:1 se upar hain. */
-    --mascot-4:#a8a194;
+    /* Chautha jaan-boojh kar neutral hai — chaaron pink hote to group flat
+       dikhta. Panel ab pastel (halka gulabi) hai, isliye charcoal ki jagah
+       theme ka mint — photo ke mint macaron jaisa ek chautha rang. Panel ke
+       halke pink par ye AA se upar hai. */
+    --mascot-4:#1f6b59;
     /* animation:end */
   }
-  [data-theme="dark"]{
-    --background:#07080a; --foreground:#fafafa;
-    --card:#131416;       --card-foreground:#fafafa;
-    --muted:#1f2227;      --muted-foreground:#8c8f95;
-    --destructive:#ff6568;
-    --border:rgba(255,255,255,.10); --input:rgba(255,255,255,.15);
-    /* brand-color:start — dark theme */
-    --primary:#d4af37;    --primary-foreground:#0a0a0a;
-    --accent:#2f270e;     --accent-foreground:#dab43f;
-    --ring:#d4af37;
-    --brand-rgb:201,162,39; --brand-deep:#896e1b;
-    /* brand-color:end */
-    --shadow-lg:0 12px 32px -8px rgba(0,0,0,.7);
-    --shadow-xl:0 24px 64px -12px rgba(0,0,0,.8);
-  }
   html{color-scheme:light;}
-  [data-theme="dark"]{color-scheme:dark;}
 
   *{margin:0;padding:0;box-sizing:border-box;}
 
@@ -382,12 +350,16 @@
        aankh/mooh cross-fade karta hai, jo <img> ke andar pahunch me nahi
        aate. aria-hidden kyunki ye sirf sajaawat hai. -->
     <svg class="mascots" viewBox="0 0 420 274" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <ellipse cx="205" cy="256" rx="186" ry="12" fill="#ffffff" opacity=".06"/>
-    
-    <!-- Tall gold block -->
+    <!-- Panel ab halka pastel hai (pehle gehra ink), isliye farsh ka saaya
+         ab hi ke bajaye gehra hai — floor par tairta hua nahi lagta. -->
+    <ellipse cx="205" cy="256" rx="186" ry="12" fill="#3b2e33" opacity=".12"/>
+
+    <!-- Tall pink block -->
     <g class="mascot mascot--1">
       <g class="turn">
-        <rect x="118" y="68" width="98" height="182" rx="18" fill="var(--mascot-1, #F39C12)"/>
+        <!-- Har mascot par ab halka plum stroke hai — panel bhi pastel hai
+             ab, aur bina outline ke halka mascot (mascot-2) usme ghul jaata. -->
+        <rect x="118" y="68" width="98" height="182" rx="18" fill="var(--mascot-1, #F39C12)" stroke="rgba(59,46,51,.18)" stroke-width="3"/>
         <g class="eye-open">
           <circle cx="147" cy="112" r="10" fill="#fff"/>
           <circle class="pupil" cx="147" cy="112" r="5" fill="#2E2A26"/>
@@ -403,10 +375,10 @@
       </g>
     </g>
     
-    <!-- Neutral warm-grey block -->
+    <!-- Neutral mint block -->
     <g class="mascot mascot--2">
       <g class="turn">
-        <rect x="206" y="104" width="86" height="146" rx="10" fill="var(--mascot-4, #2E2A26)"/>
+        <rect x="206" y="104" width="86" height="146" rx="10" fill="var(--mascot-4, #2E2A26)" stroke="rgba(59,46,51,.18)" stroke-width="3"/>
         <g class="eye-open">
           <circle cx="228" cy="146" r="9" fill="#fff"/>
           <circle class="pupil" cx="228" cy="146" r="4.5" fill="#2E2A26"/>
@@ -422,10 +394,10 @@
       </g>
     </g>
     
-    <!-- Pale champagne dome-top block -->
+    <!-- Pale pink dome-top block -->
     <g class="mascot mascot--3">
       <g class="turn">
-        <path d="M282 250 V182 a46 46 0 0 1 92 0 V250 Z" fill="var(--mascot-2, #FFC145)"/>
+        <path d="M282 250 V182 a46 46 0 0 1 92 0 V250 Z" fill="var(--mascot-2, #FFC145)" stroke="rgba(59,46,51,.18)" stroke-width="3"/>
         <g class="eye-open">
           <circle cx="305" cy="180" r="9" fill="#fff"/>
           <circle class="pupil" cx="305" cy="180" r="4.5" fill="#2E2A26"/>
@@ -441,10 +413,10 @@
       </g>
     </g>
     
-    <!-- Deep gold dome, front left -->
+    <!-- Deep pink dome, front left -->
     <g class="mascot mascot--4">
       <g class="turn">
-        <path d="M18 250 a78 78 0 0 1 156 0 Z" fill="var(--mascot-3, #FF8A3D)"/>
+        <path d="M18 250 a78 78 0 0 1 156 0 Z" fill="var(--mascot-3, #FF8A3D)" stroke="rgba(59,46,51,.18)" stroke-width="3"/>
         <g class="eye-open">
           <circle cx="74" cy="212" r="10" fill="#fff"/>
           <circle class="pupil" cx="74" cy="212" r="5" fill="#2E2A26"/>
