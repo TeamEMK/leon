@@ -14,34 +14,36 @@
 */
 
 /* ══════════════════════════════════════════════════════════════
-   DESIGN TOKENS — Pastel (light pink + mint) design system
-   Ab sirf ek theme hai — dark mode hata diya gaya, kyunki pastel look
-   sirf light surfaces par kaam karta hai. Shades yahan bhi contrast se
-   chune gaye hain (lib/brand-palette.js ke contrast() se test kiya),
-   sirf ab hue pink/mint family se hai, gold/ink se nahi.
+   DESIGN TOKENS — 5-colour pastel block palette
+   (green / blue / yellow / peach / pink — reference swatch grid).
+   Har badi surface (page background, sidebar, secondary, muted, accent)
+   apne swatch ke fairly close hai — image jaisa hi bold pastel look,
+   safed se dhula hua nahi. Buttons/badges/text ke liye jahan zaroorat
+   thi wahi shades gehri ki gayi hain, AA (4.5:1) contrast ke liye
+   (lib/brand-palette.js ke contrast() se test kiya).
 ══════════════════════════════════════════════════════════════ */
 :root{
-  --background:#fdf5f3;   --foreground:#3b2e33;
+  --background:#d6ebd1;   --foreground:#3b2e33;
   --card:#ffffff;         --card-foreground:#3b2e33;
   --popover:#ffffff;      --popover-foreground:#3b2e33;
-  --secondary:#fceae7;    --secondary-foreground:#3b2e33;
-  --muted:#e3f2ee;        --muted-foreground:#936c75;
-  --destructive:#d33b22;  --destructive-foreground:#ffffff;
-  --success:#27826d;      --warning:#e7a951;  --info:#6656c2;
-  --border:#f3dcd9;       --input:#f0d2cd;
+  --secondary:#f6dfd5;    --secondary-foreground:#3b2e33;
+  --muted:#f3f1ce;        --muted-foreground:#4f6b47;
+  --destructive:#d6371f;  --destructive-foreground:#ffffff;
+  --success:#398226;      --warning:#eed558;  --info:#2978c2;
+  --border:#b8d3b1;       --input:#a5c99c;
 
-  --chart-1:#dc2d4f; --chart-2:#27826d; --chart-3:#f2a65a;
-  --chart-4:#9b81da; --chart-5:#1e7eae;
-  /* chart-5 doosre chart-N se gehra hai jaan-boojh kar: ye role-badge.pc me
-     seedha TEXT ki tarah bhi use hota hai (white background par), aur pastel
-     sky-blue us par AA (4.5:1) fail karta tha. */
+  --chart-1:#db1f7d; --chart-2:#398226; --chart-3:#c54b16;
+  --chart-4:#85b8e8; --chart-5:#2978c2;
+  /* chart-1 = primary (pink), chart-2 = success (green) — dono jagah
+     text ki tarah bhi reuse hote hain, isliye white/card ke saamne
+     4.5:1+ par shade ki gayi hain. chart-4 sirf decorative hai
+     (chart/UI accents), isliye swatch jitna halka hi rakha. */
 
-  /* Sidebar ab bhi pastel/light hai, poore app ke saath (pehle hamesha
-     dark thi, theme se alag). Ek halki pink surface — main content ke
-     off-white/cream background se thodi gehri, taaki border ke bina bhi
-     do zone alag dikhein. */
-  --sidebar:#fadce0;          --sidebar-foreground:#3b2e33;
-  --sidebar-muted:#845862;    --sidebar-border:#f3c6ce;
+  /* Sidebar ab poore app se alag, saaf pastel BLUE hai — background
+     (green) aur cards (white) ke saath teesra zone banata hai, bilkul
+     reference image ke rang-rang blocks jaisa. */
+  --sidebar:#b8d2ea;          --sidebar-foreground:#3b2e33;
+  --sidebar-muted:#3e5a74;    --sidebar-border:#94b9db;
   --sidebar-accent:rgba(255,255,255,.55);
 
   /* brand-color:start
@@ -49,11 +51,14 @@
      tokens — lib/brand-palette.js. Shades contrast se chune jaate hain:
      pink seedha text/button ke liye kaafi gehra nahi hota, isliye
      lightness ghumake AA (4.5:1+) pura kiya gaya hai. */
-  --primary:#dc2d4f;          --primary-foreground:#ffffff;
-  --accent:#f9dce2;           --accent-foreground:#9d1a34;
-  --ring:#dc2d4f;
-  --sidebar-primary:#c0203f;  --sidebar-primary-bg:rgba(220,45,79,.18);
-  --brand-rgb:220,45,79;      --brand-deep:#9d1a34;
+  --primary:#db1f7d;          --primary-foreground:#ffffff;
+  --accent:#f5dbe8;           --accent-foreground:#9c1659;
+  --ring:#db1f7d;
+  /* sidebar ab blue hai — active-nav pink isi ke saamne alag se test
+     karke gehra kiya gaya (seedha --primary reuse karte to sirf 2.98:1
+     milta, blue ke upar pink ghul jaata). */
+  --sidebar-primary:#a3145c;  --sidebar-primary-bg:rgba(163,20,92,.20);
+  --brand-rgb:219,31,125;     --brand-deep:#9c1659;
   /* brand-color:end */
 
   --radius:.75rem;
@@ -180,13 +185,12 @@ body{
 .logout-btn{
   display:flex;align-items:center;gap:10px;padding:9px 11px;
   border-radius:var(--radius-md);cursor:pointer;font-size:13px;font-weight:500;
-  /* Sidebar ab halki pink hai (pehle near-black), isliye ye rang bhi usi
-     ke saamne 4.6:1 tak gehra kiya gaya — purana #ff8a8a dark sidebar ke
-     liye tha, halke gulabi par kho jaata. */
-  color:#b8341e;transition:background .15s,color .15s;width:100%;white-space:nowrap;
+  /* Sidebar ab pastel BLUE hai, isliye ye rang bhi usi ke saamne 4.5:1+
+     tak gehra kiya gaya — halka red blue background par kho jaata. */
+  color:#a52a18;transition:background .15s,color .15s;width:100%;white-space:nowrap;
   background:none;border:none;font-family:inherit;
 }
-.logout-btn:hover{background:rgba(184,52,30,.14);color:#8f2817;}
+.logout-btn:hover{background:rgba(165,42,24,.14);color:#7a1f12;}
 .logout-label{opacity:0;transition:opacity .2s .1s;}
 .sidebar:hover .logout-label{opacity:1;}
 
@@ -474,17 +478,17 @@ input[type=date],input[type=time],input[type=datetime-local]{color-scheme:inheri
 
 /* FMS Tasks Train
    Pehle ye track hamesha dark thi (poore theme se alag, hardcoded slate/charcoal).
-   Ab pastel — track mint, rail deep mint/teal, coaches white card jaisa,
+   Ab pastel — track yellow, rail deep green, coaches white card jaisa,
    apna coach brand pink me. */
 .fms-train-track{background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px 0 36px;overflow:hidden;position:relative;margin-bottom:16px;}
-.fms-train-track::before{content:'';position:absolute;bottom:28px;left:0;right:0;height:5px;background:linear-gradient(90deg,#27826d 0%,#53c6ac 20%,#27826d 40%,#53c6ac 60%,#27826d 80%,#53c6ac 100%);border-radius:3px;}
-.fms-train-track::after{content:'';position:absolute;bottom:24px;left:0;right:0;height:12px;background:repeating-linear-gradient(90deg,#1f6b59 0,#1f6b59 30px,transparent 30px,transparent 50px);opacity:.35;}
+.fms-train-track::before{content:'';position:absolute;bottom:28px;left:0;right:0;height:5px;background:linear-gradient(90deg,#398226 0%,#6fbf55 20%,#398226 40%,#6fbf55 60%,#398226 80%,#6fbf55 100%);border-radius:3px;}
+.fms-train-track::after{content:'';position:absolute;bottom:24px;left:0;right:0;height:12px;background:repeating-linear-gradient(90deg,#255c19 0,#255c19 30px,transparent 30px,transparent 50px);opacity:.35;}
 .fms-train-scroll{display:flex;align-items:flex-end;gap:6px;padding:0 30px 14px;width:max-content;animation:trainScroll var(--train-dur,18s) linear infinite;}
 .fms-train-scroll:hover{animation-play-state:paused;}
 @keyframes trainScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .fms-train-engine{flex-shrink:0;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 78%,#000));border:2px solid var(--primary);border-radius:10px 4px 4px 10px;padding:14px 18px;color:#fff;min-width:80px;text-align:center;font-size:24px;display:flex;flex-direction:column;align-items:center;position:relative;}
-.fms-train-engine::before,.fms-coach::before{content:'⬤';position:absolute;bottom:-14px;left:12px;color:#845862;font-size:9px;}
-.fms-train-engine::after,.fms-coach::after{content:'⬤';position:absolute;bottom:-14px;right:12px;color:#845862;font-size:9px;}
+.fms-train-engine::before,.fms-coach::before{content:'⬤';position:absolute;bottom:-14px;left:12px;color:#4f6b47;font-size:9px;}
+.fms-train-engine::after,.fms-coach::after{content:'⬤';position:absolute;bottom:-14px;right:12px;color:#4f6b47;font-size:9px;}
 .fms-coach{flex-shrink:0;border-radius:var(--radius-md);padding:12px 14px;color:var(--foreground);min-width:160px;max-width:200px;cursor:pointer;position:relative;transition:transform .2s,box-shadow .2s;border:2px solid var(--border);display:flex;flex-direction:column;gap:4px;background:var(--card);}
 .fms-coach:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg);}
 .fms-coach.active{border-color:var(--warning);box-shadow:0 0 0 3px color-mix(in srgb,var(--warning) 30%,transparent);transform:translateY(-6px);}
@@ -495,7 +499,7 @@ input[type=date],input[type=time],input[type=datetime-local]{color-scheme:inheri
 .fms-coach-num{font-size:10px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.05em;}
 .fms-coach-name{font-size:12px;font-weight:700;line-height:1.3;word-break:break-word;}
 .fms-coach-doers{font-size:10px;opacity:.75;margin-top:2px;}
-.fms-coach-connector{width:20px;height:8px;background:#c98a95;border-radius:2px;flex-shrink:0;align-self:flex-end;margin-bottom:14px;}
+.fms-coach-connector{width:20px;height:8px;background:#cf9e7c;border-radius:2px;flex-shrink:0;align-self:flex-end;margin-bottom:14px;}
 .fms-train-speed{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--secondary);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);font-size:12px;color:var(--muted-foreground);}
 .fms-train-speed input[type=range]{flex:1;accent-color:var(--primary);}
 .fms-step-rows-table{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;margin-top:4px;box-shadow:var(--shadow-xs);}

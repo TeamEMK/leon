@@ -33,19 +33,17 @@
   display:grid;
   place-items:center;
   padding:clamp(24px,4vw,64px);
-  /* Do parat, pastel mockup (light pink + mint macarons) se seedha match:
-       1. mascots ke peeche mint ka narm glow — ekdum photo jaisa, jahan
-          mint macaron coral background par ubhar ke dikhta hai
-       2. upar se neeche coral-pink gradient, jo flat rang se zyada gehrai deta
-     Panel pehle gehra ink tha (dono theme me) — ab pastel theme ke saath
-     hamesha ye coral-pink hi rehta hai. Mascots par isi wajah se stroke
-     outline di gayi hai (index.html), taaki halka mascot bhi is pink par
-     ghule nahi. */
-  background:
-    radial-gradient(ellipse 60% 46% at 50% 64%,
-      color-mix(in srgb,#53c6ac 32%,#fbd9d3),
-      transparent 72%),
-    linear-gradient(180deg,#fbd9d3,#f3a79c);
+  /* Reference swatch grid (green/blue/yellow/peach/pink) seedha ek diagonal
+     gradient me — panel ka apna alag "rang-rang blocks" look, bina literal
+     grid banaye (jo card ke upar text/mascots ke saath takrata). Mascots par
+     isi wajah se stroke outline di gayi hai (index.html), taaki koi bhi
+     mascot kisi bhi stop ke rang me ghule nahi. */
+  background: linear-gradient(135deg,
+    #c8e6c0 0%,
+    #a9cbea 25%,
+    #f7f3a5 50%,
+    #f5ad8e 75%,
+    #f2a0c9 100%);
 }
 
 .form-panel{
