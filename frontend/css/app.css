@@ -476,32 +476,39 @@ input[type=date],input[type=time],input[type=datetime-local]{color-scheme:inheri
 .drag-handle{cursor:grab;color:var(--muted-foreground);font-size:16px;padding:0 4px;}
 .drag-handle:active{cursor:grabbing;}
 
-/* FMS Tasks Train
-   Pehle ye track hamesha dark thi (poore theme se alag, hardcoded slate/charcoal).
-   Ab pastel — track yellow, rail deep green, coaches white card jaisa,
-   apna coach brand pink me. */
-.fms-train-track{background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px 0 36px;overflow:hidden;position:relative;margin-bottom:16px;}
-.fms-train-track::before{content:'';position:absolute;bottom:28px;left:0;right:0;height:5px;background:linear-gradient(90deg,#398226 0%,#6fbf55 20%,#398226 40%,#6fbf55 60%,#398226 80%,#6fbf55 100%);border-radius:3px;}
-.fms-train-track::after{content:'';position:absolute;bottom:24px;left:0;right:0;height:12px;background:repeating-linear-gradient(90deg,#255c19 0,#255c19 30px,transparent 30px,transparent 50px);opacity:.35;}
-.fms-train-scroll{display:flex;align-items:flex-end;gap:6px;padding:0 30px 14px;width:max-content;animation:trainScroll var(--train-dur,18s) linear infinite;}
-.fms-train-scroll:hover{animation-play-state:paused;}
-@keyframes trainScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-.fms-train-engine{flex-shrink:0;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 78%,#000));border:2px solid var(--primary);border-radius:10px 4px 4px 10px;padding:14px 18px;color:#fff;min-width:80px;text-align:center;font-size:24px;display:flex;flex-direction:column;align-items:center;position:relative;}
-.fms-train-engine::before,.fms-coach::before{content:'⬤';position:absolute;bottom:-14px;left:12px;color:#4f6b47;font-size:9px;}
-.fms-train-engine::after,.fms-coach::after{content:'⬤';position:absolute;bottom:-14px;right:12px;color:#4f6b47;font-size:9px;}
-.fms-coach{flex-shrink:0;border-radius:var(--radius-md);padding:12px 14px;color:var(--foreground);min-width:160px;max-width:200px;cursor:pointer;position:relative;transition:transform .2s,box-shadow .2s;border:2px solid var(--border);display:flex;flex-direction:column;gap:4px;background:var(--card);}
-.fms-coach:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg);}
-.fms-coach.active{border-color:var(--warning);box-shadow:0 0 0 3px color-mix(in srgb,var(--warning) 30%,transparent);transform:translateY(-6px);}
-.fms-coach.not-mine{background:var(--secondary);color:var(--muted-foreground);opacity:.65;cursor:not-allowed;pointer-events:none;}
-/* Apna coach brand pink ke gradient me, white text — dono shade par
-   AA pass karta hai (--brand-deep hi is contrast ke liye chuna gaya tha). */
-.fms-coach.mine{background:linear-gradient(135deg,var(--brand-deep),color-mix(in srgb,var(--brand-deep) 86%,#fff));color:#fff;border-color:transparent;}
-.fms-coach-num{font-size:10px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.05em;}
-.fms-coach-name{font-size:12px;font-weight:700;line-height:1.3;word-break:break-word;}
-.fms-coach-doers{font-size:10px;opacity:.75;margin-top:2px;}
-.fms-coach-connector{width:20px;height:8px;background:#cf9e7c;border-radius:2px;flex-shrink:0;align-self:flex-end;margin-bottom:14px;}
-.fms-train-speed{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--secondary);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);font-size:12px;color:var(--muted-foreground);}
-.fms-train-speed input[type=range]{flex:1;accent-color:var(--primary);}
+/* FMS Tasks — step pills
+   Pehle yahan ek auto-scrolling "train" thi (coaches lagataar sarakte rehte
+   the, speed slider + pause button ke saath) — colorful lagti thi par
+   distracting bhi thi. Ab ek saaf, static pill row: sab steps ek saath
+   dikhte hain, sirf abhi khula hua step highlight hota hai. */
+.fms-step-pills{display:flex;flex-wrap:wrap;gap:10px;}
+.fms-step-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:9px 16px;border-radius:99px;max-width:260px;
+  background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow-xs);
+  font-size:13px;font-weight:600;color:var(--foreground);
+  cursor:pointer;user-select:none;
+  transition:background .15s,color .15s,border-color .15s,transform .12s,box-shadow .15s;
+}
+.fms-step-pill:hover{border-color:var(--primary);color:var(--primary);box-shadow:var(--shadow-sm);transform:translateY(-1px);}
+.fms-step-pill.not-mine{background:var(--secondary);color:var(--muted-foreground);box-shadow:none;cursor:not-allowed;opacity:.75;pointer-events:none;}
+/* Khula hua step brand pink ke gradient me, white text — --brand-deep isi
+   contrast ke liye chuna gaya tha (white text AA pass karta hai). */
+.fms-step-pill.active{
+  background:linear-gradient(135deg,var(--brand-deep),color-mix(in srgb,var(--brand-deep) 86%,#fff));
+  color:#fff;border-color:transparent;box-shadow:var(--shadow-md);transform:translateY(-1px);
+}
+.fms-step-pill-num{
+  display:inline-grid;place-items:center;width:21px;height:21px;border-radius:50%;flex-shrink:0;
+  background:color-mix(in srgb,var(--foreground) 10%,transparent);
+  font-size:11px;font-weight:700;
+}
+.fms-step-pill.active .fms-step-pill-num{background:rgba(255,255,255,.28);color:#fff;}
+.fms-step-pill.not-mine .fms-step-pill-num{background:color-mix(in srgb,var(--muted-foreground) 18%,transparent);}
+/* Kuch step names bahut lambe hote hain — ellipsis se sab pills ek jaisi
+   height/width range me rehte hain (poora naam title tooltip me hai). */
+.fms-step-pill-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.fms-step-pill-lock{font-size:11px;opacity:.7;flex-shrink:0;}
 .fms-step-rows-table{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;margin-top:4px;box-shadow:var(--shadow-xs);}
 .fms-step-rows-scroll{max-height:65vh;overflow:auto;}
 .fms-step-rows-table table{width:100%;border-collapse:separate;border-spacing:0;}

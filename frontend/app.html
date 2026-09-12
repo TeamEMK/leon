@@ -496,24 +496,21 @@
       <button id="fmsPlanPendingBtn" class="btn btn-outline btn-sm" style="display:none;white-space:nowrap;color:var(--warning);border-color:color-mix(in srgb,var(--warning) 26%,transparent)" onclick="openPlanPending()">⏳ Plan date pending</button>
     </div>
 
-    <!-- Train Container -->
-    <div id="fmsTrainContainer" style="display:none;margin-bottom:16px">
-      <div style="font-size:12px;font-weight:600;color:var(--muted-foreground);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">
-        Process Flow — Click a step to view tasks
-        <span id="fmsTrainLegend" style="margin-left:12px;font-weight:400;text-transform:none">
-          <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 65%,#fff));display:inline-block"></span> Your step</span>
-          <span style="margin-left:10px;display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:var(--foreground);display:inline-block;opacity:.5"></span> Other step</span>
+    <!-- Steps — same card/header pattern as the rest of the app (task-table-card),
+         taaki ye poori app se consistent lage, floating pills ki jagah. -->
+    <div id="fmsTrainContainer" class="task-table-card" style="display:none;margin-bottom:16px">
+      <div class="card-head">
+        <div>
+          <div class="card-head-title">Process Flow</div>
+          <div style="font-size:11.5px;color:var(--muted-foreground);margin-top:2px">Click a step to view its pending tasks</div>
+        </div>
+        <span id="fmsTrainLegend" style="font-size:12px;font-weight:500;color:var(--muted-foreground);display:flex;align-items:center;gap:14px;flex-shrink:0">
+          <span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap"><span style="width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--brand-deep),color-mix(in srgb,var(--brand-deep) 65%,#fff));display:inline-block"></span>Selected</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap"><span style="width:9px;height:9px;border-radius:50%;background:var(--muted-foreground);display:inline-block;opacity:.45"></span>Not your step</span>
         </span>
       </div>
-      <div class="fms-train-track" id="fmsTrainTrack">
-        <div id="fmsTrainInner" class="fms-train-scroll"></div>
-      </div>
-      <div class="fms-train-speed">
-        <span>🐢</span>
-        <input type="range" id="fmsTrainSpeedSlider" min="5" max="60" value="18" oninput="setTrainSpeed(this.value)"/>
-        <span>🐇</span>
-        <span style="margin-left:8px;color:var(--foreground);font-weight:600" id="fmsTrainSpeedLabel">18s</span>
-        <button class="btn btn-outline btn-sm" style="margin-left:auto" id="fmsTrainPauseBtn" onclick="toggleTrainPause()">⏸ Pause</button>
+      <div style="padding:16px 18px">
+        <div class="fms-step-pills" id="fmsTrainInner"></div>
       </div>
     </div>
 

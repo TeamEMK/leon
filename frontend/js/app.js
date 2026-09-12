@@ -6205,7 +6205,6 @@ async function saveFMS() {
 let fmsTasksActiveFmsId = null;
 let fmsTasksActiveStepId = null;
 let fmsTasksActiveStepData = null;
-let fmsTrainPaused = false;
 
 async function loadFMSTasks() {
   document.getElementById('fmsTasksRefreshBtn').style.display = 'block';
@@ -6293,37 +6292,23 @@ function buildFMSTrain(steps, sheet) {
   }
   window._fmsAllSteps = steps; // Store all steps for modal use
   const isAdmin = ME.role === 'admin';
-  const uid = ME.id;
 
-  // Build double set for infinite scroll loop
-  const buildCoaches = () => steps.map((s, i) => {
+  document.getElementById('fmsTrainInner').innerHTML = steps.map(s => {
     const isMine = isAdmin || s.isMyStep;
     const doerNames = (s.doers || []).map(d => d.name).join(', ') || '—';
+    // Naam pill me ellipsis se kat sakta hai — tooltip me poora naam + doers,
+    // taaki hover karte hi pura context mil jaaye.
+    const tail = isMine ? 'Click to view tasks' : 'Not your step';
+    const title = escapeHtml(`${s.step_name} — Doers: ${doerNames} — ${tail}`);
     return `
-      <div class="fms-coach ${isMine ? 'mine' : 'not-mine'}" 
+      <div class="fms-step-pill ${isMine ? 'mine' : 'not-mine'}"
            onclick="${isMine ? `selectFMSStep(${s.id},'${s.step_name.replace(/'/g,"\\'")}','${doerNames.replace(/'/g,"\\'")}')` : ''}"
-           title="${isMine ? 'Click to view tasks' : 'Not your step'}">
-        <div class="fms-coach-num">Step ${s.step_order}</div>
-        <div class="fms-coach-name">${s.step_name}</div>
-        <div class="fms-coach-doers">👤 ${doerNames}</div>
-        ${isMine ? '<div style="font-size:9px;margin-top:4px;opacity:.7">▶ Click to open</div>' : '<div style="font-size:9px;margin-top:4px;opacity:.5">🔒 Not assigned</div>'}
-      </div>
-      ${i < steps.length - 1 ? '<div class="fms-coach-connector"></div>' : ''}`;
+           title="${title}">
+        <span class="fms-step-pill-num">${s.step_order}</span>
+        <span class="fms-step-pill-name">${escapeHtml(s.step_name)}</span>
+        ${!isMine ? '<span class="fms-step-pill-lock">🔒</span>' : ''}
+      </div>`;
   }).join('');
-
-  const engine = `
-    <div class="fms-train-engine">
-      🚂
-      <div style="font-size:9px;margin-top:4px;opacity:.7;max-width:70px;text-align:center;word-break:break-word">${(document.getElementById('fmsTasksSelect').selectedOptions[0]?.text || '').substring(0,12)}</div>
-    </div>
-    <div class="fms-coach-connector"></div>`;
-
-  // Double the coaches for seamless loop
-  const coaches = buildCoaches();
-  document.getElementById('fmsTrainInner').innerHTML = engine + coaches + '<div style="width:30px;flex-shrink:0"></div>' + coaches;
-
-  // Set initial speed
-  setTrainSpeed(document.getElementById('fmsTrainSpeedSlider').value);
 }
 
 function selectFMSStep(stepId, stepName, doerNames) {
@@ -6339,9 +6324,9 @@ function selectFMSStep(stepId, stepName, doerNames) {
     updBtn.style.display = hasExtras ? 'inline-flex' : 'none';
   }
 
-  // Highlight selected coach
-  document.querySelectorAll('.fms-coach').forEach(c => {
-    c.classList.toggle('active', c.querySelector('.fms-coach-name')?.textContent === stepName);
+  // Highlight selected step pill
+  document.querySelectorAll('.fms-step-pill').forEach(c => {
+    c.classList.toggle('active', c.querySelector('.fms-step-pill-name')?.textContent === stepName);
   });
 
   document.getElementById('fmsTaskStepName').textContent = stepName;
@@ -7048,26 +7033,6 @@ async function saveFMSDone() {
   if (typeof loadDashFMS === 'function' && document.getElementById('page-dashboard')?.classList.contains('active')) {
     loadDashFMS();
   }
-}
-
-function setTrainSpeed(val) {
-  const dur = parseInt(val);
-  document.getElementById('fmsTrainSpeedLabel').textContent = dur + 's';
-  const scroll = document.getElementById('fmsTrainInner');
-  if (scroll) {
-    scroll.style.setProperty('--train-dur', dur + 's');
-    scroll.style.animationDuration = dur + 's';
-  }
-  const track = document.getElementById('fmsTrainTrack');
-  if (track) track.style.setProperty('--train-dur', dur + 's');
-}
-
-function toggleTrainPause() {
-  fmsTrainPaused = !fmsTrainPaused;
-  const scroll = document.getElementById('fmsTrainInner');
-  const btn = document.getElementById('fmsTrainPauseBtn');
-  if (scroll) scroll.style.animationPlayState = fmsTrainPaused ? 'paused' : 'running';
-  if (btn) btn.textContent = fmsTrainPaused ? '▶ Play' : '⏸ Pause';
 }
 
 // ══════════════════════════════════════════════════════
