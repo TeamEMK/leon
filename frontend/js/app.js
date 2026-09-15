@@ -915,6 +915,25 @@ function updateDashHeaderCounts() {
   document.getElementById('dCompleted').textContent = completed;
 }
 
+// Employee dropdown (admin/hod) apna fetch+DOM khud sambhalta hai — PC ke
+// refreshPCEmployeeDropdown() jaisa hi — taaki loadDashboard() ise start
+// karke uske khatam hone ka wait kiye bina turant task table render kar sake.
+async function loadDashEmployeeDropdown(isHod) {
+  const empFilter = document.getElementById('dashEmployeeFilter');
+  const users = await api(withSeg('/api/users'));
+  const filtered = isHod
+    ? users.filter(u => u.department === ME.department)
+    : users;
+  const prev = empFilter.value;
+  empFilter.innerHTML = '<option value="all">All Employees</option>';
+  filtered.forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u.id; opt.textContent = u.name;
+    empFilter.appendChild(opt);
+  });
+  if ([...empFilter.options].some(o => o.value === prev)) empFilter.value = prev;
+}
+
 async function loadDashboard() {
   const empFilter = document.getElementById('dashEmployeeFilter');
   const isAdmin = ME.role === 'admin';
@@ -922,50 +941,25 @@ async function loadDashboard() {
   const isPC = ME.role === 'pc';
 
   const baseUrl = dashBaseUrl();
-  const [dDel, dChl] = await Promise.all([
+  // Teeno independent fetches (delegation+checklist, employee dropdown, FMS)
+  // ab ek saath shuru hote hain. Pehle ye baari-baari chalte the — employee
+  // dropdown ka poora fetch khatam hone tak task table hi nahi banti thi,
+  // aur FMS section (Google Sheets se aata hai, sabse dheema) sabse aakhir
+  // me shuru hota tha — matlab dashboard un teeno ke total time jitna slow
+  // dikhta tha. Ab koi bhi doosre ka wait nahi karta.
+  const delChlPromise = Promise.all([
     api(baseUrl + 'delegation&list=' + dashCard),
     api(baseUrl + 'checklist&list=' + dashCard)
   ]);
 
-  // Error check: agar DB ya API fail ho toh user ko dikhao
-  if (dDel.error || dChl.error) {
-    const errMsg = dDel.error || dChl.error;
-    console.error('Dashboard API error:', errMsg);
-    document.getElementById('dTotal').textContent = 'Err';
-    document.getElementById('dPending').textContent = 'Err';
-    document.getElementById('dRevised').textContent = 'Err';
-    document.getElementById('dCompleted').textContent = 'Err';
-    document.getElementById('dashTbody').innerHTML = `<tr><td colspan="6" style="color:red;padding:16px;text-align:center">⚠️ Data load failed: ${errMsg}</td></tr>`;
-    return;
-  }
-
-  _dashDelCounts = { pending: dDel.pending||0, completed: dDel.completed||0, revised: dDel.revised||0 };
-  _dashChlCounts = { pending: dChl.pending||0, completed: dChl.completed||0, revised: dChl.revised||0 };
-  updateDashHeaderCounts();
-
   if (isAdmin || isHod || isPC) {
     empFilter.style.display = 'block';
-
     if (isPC) {
-      // Show date range filter for PC
       const drFilter = document.getElementById('pcDateRangeFilter');
       if (drFilter) drFilter.style.display = 'flex';
-      // Smart dropdown: sirf pending wale users
-      await refreshPCEmployeeDropdown();
+      refreshPCEmployeeDropdown(); // fire-and-forget — apna DOM khud update karta hai
     } else {
-      // Segment badalne par dropdown dobara build hona chahiye — isliye har baar rebuild
-      const users = await api(withSeg('/api/users'));
-      const filtered = isHod
-        ? users.filter(u => u.department === ME.department)
-        : users;
-      const prev = empFilter.value;
-      empFilter.innerHTML = '<option value="all">All Employees</option>';
-      filtered.forEach(u => {
-        const opt = document.createElement('option');
-        opt.value = u.id; opt.textContent = u.name;
-        empFilter.appendChild(opt);
-      });
-      if ([...empFilter.options].some(o => o.value === prev)) empFilter.value = prev;
+      loadDashEmployeeDropdown(isHod); // fire-and-forget — apna DOM khud update karta hai
     }
 
     if (isAdmin) {
@@ -982,6 +976,26 @@ async function loadDashboard() {
         <button class="btn btn-primary" onclick="openDelegate()">+ Assign Task</button>`;
     }
   }
+
+  loadDashFMS(); // fire-and-forget — sabse dheema hai (Google Sheets), isliye sabse pehle shuru
+
+  const [dDel, dChl] = await delChlPromise;
+
+  // Error check: agar DB ya API fail ho toh user ko dikhao
+  if (dDel.error || dChl.error) {
+    const errMsg = dDel.error || dChl.error;
+    console.error('Dashboard API error:', errMsg);
+    document.getElementById('dTotal').textContent = 'Err';
+    document.getElementById('dPending').textContent = 'Err';
+    document.getElementById('dRevised').textContent = 'Err';
+    document.getElementById('dCompleted').textContent = 'Err';
+    document.getElementById('dashTbody').innerHTML = `<tr><td colspan="6" style="color:red;padding:16px;text-align:center">⚠️ Data load failed: ${errMsg}</td></tr>`;
+    return;
+  }
+
+  _dashDelCounts = { pending: dDel.pending||0, completed: dDel.completed||0, revised: dDel.revised||0 };
+  _dashChlCounts = { pending: dChl.pending||0, completed: dChl.completed||0, revised: dChl.revised||0 };
+  updateDashHeaderCounts();
 
   if (dashChartInst) dashChartInst.destroy();
 
@@ -1004,9 +1018,6 @@ async function loadDashboard() {
   setDashTasks(dDel, dChl);
   // Keep sort state across reloads (don't reset)
   renderDashTable(window._lastDashTasks, dashType);
-
-  // Load FMS section — respects same employee filter
-  loadDashFMS();
 }
 
 // PC: date range change → refresh dropdown then dashboard

@@ -2410,10 +2410,14 @@ app.get('/api/fms-dashboard', requireAuth, async (req, res) => {
     // non-member doer ko dashboard par FMS section dikhta hi nahi.
     if (!fmsList.length) return res.json({ rows: [], pendingCount: 0, inFms: false });
 
-    const allRows = [];
-
-    for (const sheet of fmsList) {
+    // Har FMS sheet ka Google Sheets read pehle ek-ek karke (sequentially)
+    // chalta tha — 3 sheets ho to 3 ke barabar wait, jabki koi sheet doosri
+    // par depend nahi karti. Ab sab sheets ek saath parallel me padhi jaati
+    // hain (Promise.all), phir unke rows jod diye jaate hain. Dashboard ka
+    // FMS section isi endpoint se sabse zyada dheema tha — ye uski asli wajah thi.
+    const perSheetRows = await Promise.all(fmsList.map(async (sheet) => {
       const fmsName = sheet.fms_name || sheet.sheet_name;
+      const rows = [];
 
       // Get steps for this FMS that are assigned to targetUserIds
       let steps;
@@ -2426,7 +2430,7 @@ app.get('/api/fms-dashboard', requireAuth, async (req, res) => {
            WHERE fst.fms_id=? AND fsd.user_id IN (${targetUserIds.map(()=>'?').join(',')})
            ORDER BY fst.step_order ASC`, [sheet.id, ...targetUserIds]);
       }
-      if (!steps.length) continue;
+      if (!steps.length) return rows;
 
       // Doers — saare steps ke ek hi query me
       const doersByStep = await _fmsDoersByStep(steps.map(s => s.id));
@@ -2525,7 +2529,7 @@ app.get('/api/fms-dashboard', requireAuth, async (req, res) => {
               });
             }
 
-            allRows.push({
+            rows.push({
               fmsName,
               fmsId: sheet.id,
               stepName: step.step_name,
@@ -2543,7 +2547,9 @@ app.get('/api/fms-dashboard', requireAuth, async (req, res) => {
       } catch(e) {
         // Skip sheet on error, don't fail whole request
       }
-    }
+      return rows;
+    }));
+    const allRows = perSheetRows.flat();
 
     res.json({ rows: allRows, pendingCount: allRows.length, inFms: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
