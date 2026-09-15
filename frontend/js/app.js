@@ -162,6 +162,14 @@ let dashType = 'all';
 let dashCard = 'pending';
 let tasksType = 'delegation';
 let dashChartInst = null;
+// Overview cards (Total/Pending/Revised/Completed) ke liye aakhri jaana hua
+// data — dashType tab badalne par (delegation/checklist/fms/all) bina dobara
+// fetch kiye turant sahi number dikhane ke liye. FMS ka yahan sirf "pending"
+// count milta hai (completed/revised FMS ke liye is dashboard me track nahi
+// hota — poori sheet padhna mehenga hota, isliye jaan-boojh kar nahi kiya).
+let _dashDelCounts = { pending: 0, completed: 0, revised: 0 };
+let _dashChlCounts = { pending: 0, completed: 0, revised: 0 };
+let _dashFmsPending = null; // null = abhi tak load nahi hua
 
 // ══════════════════════════════════════════════════════
 // OFFICE / FACTORY SEGMENT (admin ka current view)
@@ -870,6 +878,43 @@ function dashBaseUrl() {
     : `/api/dashboard?taskType=`;
 }
 
+// Overview cards (Total/Pending/Revised/Completed) ab currently selected
+// type-tab (All/Delegation/Checklist/FMS) ke hisaab se dikhte hain — pehle
+// ye hamesha sirf Delegation+Checklist ka jod dikhate the, FMS tab par bhi
+// wahi purane number rehte the (jinka FMS ke rows se koi lena-dena nahi
+// tha) — isi se confusion hota tha ki "Total 3" FMS ke 3 rows se match
+// kyun nahi karta.
+function updateDashHeaderCounts() {
+  const d = _dashDelCounts, c = _dashChlCounts;
+  const fms = _dashFmsPending; // null jab tak load na ho
+  let pending, completed, revised;
+
+  if (dashType === 'delegation') {
+    pending = d.pending; completed = d.completed; revised = d.revised;
+  } else if (dashType === 'checklist') {
+    pending = c.pending; completed = c.completed; revised = c.revised;
+  } else if (dashType === 'fms') {
+    // FMS ka is dashboard me sirf "abhi pending" count milta hai — poori
+    // sheet padh kar completed/revised nikaalna bahut mehenga hota
+    // (Google Sheets read), isliye wo do card "—" dikhate hain, 0 nahi —
+    // 0 se lagta jaise kabhi koi FMS step complete hi nahi hua.
+    pending = fms == null ? '…' : fms;
+    document.getElementById('dTotal').textContent = pending;
+    document.getElementById('dPending').textContent = pending;
+    document.getElementById('dRevised').textContent = '—';
+    document.getElementById('dCompleted').textContent = '—';
+    return;
+  } else { // 'all' — teeno type ek saath
+    pending   = d.pending + c.pending + (fms || 0);
+    completed = d.completed + c.completed;
+    revised   = d.revised + c.revised;
+  }
+  document.getElementById('dTotal').textContent = pending + completed;
+  document.getElementById('dPending').textContent = pending;
+  document.getElementById('dRevised').textContent = revised;
+  document.getElementById('dCompleted').textContent = completed;
+}
+
 async function loadDashboard() {
   const empFilter = document.getElementById('dashEmployeeFilter');
   const isAdmin = ME.role === 'admin';
@@ -894,12 +939,9 @@ async function loadDashboard() {
     return;
   }
 
-  const pendingCount   = (dDel.pending||0)   + (dChl.pending||0);
-  const completedCount = (dDel.completed||0) + (dChl.completed||0);
-  document.getElementById('dTotal').textContent = pendingCount + completedCount;
-  document.getElementById('dPending').textContent = pendingCount;
-  document.getElementById('dRevised').textContent = (dDel.revised||0) + (dChl.revised||0);
-  document.getElementById('dCompleted').textContent = completedCount;
+  _dashDelCounts = { pending: dDel.pending||0, completed: dDel.completed||0, revised: dDel.revised||0 };
+  _dashChlCounts = { pending: dChl.pending||0, completed: dChl.completed||0, revised: dChl.revised||0 };
+  updateDashHeaderCounts();
 
   if (isAdmin || isHod || isPC) {
     empFilter.style.display = 'block';
@@ -945,7 +987,7 @@ async function loadDashboard() {
 
   const combinedPending   = (dDel.pending||0)   + (dChl.pending||0);
   const combinedCompleted = (dDel.completed||0) + (dChl.completed||0);
-  const combinedRevised   = dDel.revised||0;
+  const combinedRevised   = (dDel.revised||0)   + (dChl.revised||0);
   const chartLabels = ['Completed','Pending','Revised'];
   const chartData   = [combinedCompleted, combinedPending, combinedRevised];
   // Theme tokens se rang — dark mode par apne aap adjust ho jate hain
@@ -1011,6 +1053,10 @@ function dashTab(type, el) {
   dashType = type;
   document.querySelectorAll('#dashTypeTabGroup .tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
+  // Overview cards turant is tab ke number dikhayein — jo data pehle se
+  // load ho chuka hai usi se (FMS abhi load ho raha ho to loadDashFMS() ke
+  // andar dobara refresh ho jaayega jab wo aa jaaye).
+  updateDashHeaderCounts();
 
   // FMS rows Google Sheets se aati hain, isliye alag loader. Pehli baar tab par
   // aane par "Loading…" dikhao — sheet padhne me kuch second lagte hain.
@@ -1073,7 +1119,11 @@ async function loadDashFMS() {
   const section = document.getElementById('dashFMSSection');
   if (!section) return;
   // FMS band hai — dashboard ka poora "FMS Pending Tasks" panel bhi chhupa do
-  if (isPageDisabled('fms') && isPageDisabled('fms-tasks')) { section.style.display = 'none'; return; }
+  if (isPageDisabled('fms') && isPageDisabled('fms-tasks')) {
+    section.style.display = 'none';
+    _dashFmsPending = 0; updateDashHeaderCounts();
+    return;
+  }
 
   const isAdmin = ME.role === 'admin';
   const isHod   = ME.role === 'hod';
@@ -1120,12 +1170,18 @@ async function loadDashFMS() {
   window._dashFMSMember = data.inFms !== false;
   // === false hi check karo, !data.inFms nahi: purana server (deploy ke beech)
   // ye flag nahi bhejta, tab section chhupna nahi chahiye.
-  if (!isManager && data.inFms === false) { section.style.display = 'none'; return; }
+  if (!isManager && data.inFms === false) {
+    section.style.display = 'none';
+    _dashFmsPending = 0; updateDashHeaderCounts();
+    return;
+  }
   section.style.display = 'block';
 
   const rows = data.rows || [];
   const today = new Date().toISOString().split('T')[0];
 
+  _dashFmsPending = rows.length;
+  updateDashHeaderCounts();
   document.getElementById('dashFMSCount').textContent = rows.length ? `(${rows.length} pending)` : '';
 
   const tbody = document.getElementById('dashFMSTbody');
