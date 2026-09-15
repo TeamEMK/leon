@@ -2969,7 +2969,18 @@ async function uploadUsersCSV() {
   const r = await api('/api/users/bulk','POST',{users});
   if (r.error) { showToast(r.error,'error'); return; }
   const suc = document.getElementById('userSuccess');
-  suc.textContent = `✅ Added: ${r.added}, Skipped: ${r.skipped}`;
+  // errors[] pehle dikhaya hi nahi jaata tha — tab sirf "Added: 0, Skipped: 0"
+  // dikhta tha, aur agar INSERT constraint par phatta to poori request 500 ban
+  // jaati thi yaani "Server error. Please try again." Dono haal me admin ko ye
+  // pata hi nahi chalta tha ki kaunsi row kyun nahi bani.
+  const failed = (r.errors && r.errors.length) ? r.errors : [];
+  let msg = `Added: ${r.added}, Skipped: ${r.skipped}`;
+  if (failed.length) {
+    msg += `, Failed: ${failed.length}\n` + failed.slice(0, 5).join("\n");
+    if (failed.length > 5) msg += `\n…aur ${failed.length - 5}`;
+  }
+  suc.textContent = msg;
+  suc.style.whiteSpace = "pre-line";
   suc.style.display='block';
   loadUsers();
 }
