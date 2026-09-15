@@ -31,21 +31,17 @@
     --radius:.75rem;
     --shadow-lg:0 12px 32px -8px rgba(59,46,51,.16);
     --shadow-xl:0 24px 64px -12px rgba(59,46,51,.22);
-    /* Mascots ke body colours. Ye brand-color markers ke BAHAR hain kyunki
-       inki apni koi value nahi — teeno brand ke token se bante hain, isliye
-       har client ki copy me apne aap uske rang me aa jaate hain.
-       Yahan --primary NAHI liya: wo button/text ke liye gehra kiya hua shade
-       hai, aur usse bane mascots matmaile dikhte the. --brand-rgb asli
-       brand rang hai. */
+    /* Mascots ke body colours. Pehle ye --brand-rgb (pink) se bante the —
+       ab jaan-boojh kar alag rakhe hain: mascots ka apna violet rang hai,
+       brand pink (buttons/links) se bilkul juda hua. */
     /* animation:start */
-    --mascot-1:rgb(var(--brand-rgb));
-    --mascot-2:color-mix(in srgb,rgb(var(--brand-rgb)) 55%,#fff);
-    --mascot-3:color-mix(in srgb,rgb(var(--brand-rgb)) 80%,#000);
-    /* Chautha jaan-boojh kar neutral hai — chaaron pink hote to group flat
-       dikhta. Panel ab paanch-rangi gradient hai, isliye chautha rang
-       palette ka BLUE liya — group me green/blue/yellow/peach/pink sab
-       ek saath dikhte hain, bilkul reference swatch grid jaisa. */
-    --mascot-4:#1f5f8f;
+    --mascot-rgb:124,77,203;
+    --mascot-1:rgb(var(--mascot-rgb));
+    --mascot-2:color-mix(in srgb,rgb(var(--mascot-rgb)) 55%,#fff);
+    --mascot-3:color-mix(in srgb,rgb(var(--mascot-rgb)) 80%,#000);
+    /* Chautha jaan-boojh kar neutral hai — chaaron violet hote to group flat
+       dikhta. Warm peach cool violet ke saamne saaf contrast deta hai. */
+    --mascot-4:#d97d3d;
     /* animation:end */
   }
   html{color-scheme:light;}
@@ -241,11 +237,13 @@
     background:var(--card);
   }
 
+  /* Sign In button jaan-boojh kar pure black/white hai — baaki page ke
+     brand pink se alag rakha gaya hai, sirf yahi button. */
   .btn-login{
     width:100%;
     padding:16px;
-    background:var(--primary);
-    color:var(--primary-foreground);
+    background:#000000;
+    color:#ffffff;
     border:none;
     border-radius:var(--radius);
     font-size:15px;
@@ -255,12 +253,12 @@
     transition:background .15s, box-shadow .15s, transform .1s;
     margin-top:6px;
     letter-spacing:.01em;
-    box-shadow:0 4px 16px color-mix(in srgb,var(--primary) 28%,transparent);
+    box-shadow:0 4px 16px rgba(0,0,0,.32);
   }
   .btn-login:hover{
-    background:color-mix(in srgb,var(--primary) 88%,#000);
+    background:#1a1a1a;
     transform:translateY(-2px);
-    box-shadow:0 8px 24px color-mix(in srgb,var(--primary) 36%,transparent);
+    box-shadow:0 8px 24px rgba(0,0,0,.42);
   }
   .btn-login:active{ transform:translateY(0); }
   .btn-login:focus-visible{ outline:2px solid var(--ring); outline-offset:2px; }
