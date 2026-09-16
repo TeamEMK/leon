@@ -6831,11 +6831,15 @@ function openFMSDoneModal(rowIdx) {
   // Set plan display
   document.getElementById('fmsDonePlanDisplay').textContent = row.planValue || '—';
 
-  // Set actual = today's date only (DD/MM/YYYY) — no timestamp saved to sheet
+  // Actual = poora timestamp (date + time), ISO order (YYYY-MM-DD HH:MM:SS) me.
+  // Pehle sirf date (DD/MM/YYYY) jaata tha. DD/MM order isliye nahi liya kyunki
+  // sheet US-locale (M/D/YYYY) me bhi ho sakti hai — tab "16/09/2026" jaisi
+  // date month=16 bankar sheet me invalid/error ban jaati (16 tareekh ko
+  // MM position me daal do to koi bhi US-locale sheet use date maan hi nahi
+  // paati). ISO order kisi bhi locale me ambiguous nahi hota.
   const now = new Date();
   const pad = n => String(n).padStart(2,'0');
-  const dateOnlyStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
-  const actualStr = dateOnlyStr; // Only date saved to sheet
+  const actualStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   document.getElementById('fmsDoneActualDisplay').textContent = actualStr;
 
   // Check delay: actual > plan = delayed

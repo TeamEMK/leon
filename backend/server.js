@@ -3546,10 +3546,12 @@ app.post('/api/fms-tasks/:fmsId/steps/:stepId/done', requireAuth, async (req, re
   try {
     const { rowNumber, actualValue, delayReason, extraInputs, planValue } = req.body;
     if (!rowNumber || !actualValue) return res.status(400).json({ error: 'rowNumber and actualValue required' });
-    // Strip time portion — save only date (DD-MM-YYYY) to Google Sheet
-    let dateOnlyValue = actualValue;
-    const dtMatch = actualValue.match(/^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/);
-    if (dtMatch) dateOnlyValue = dtMatch[1];
+    // Poora timestamp (date+time) hi sheet me likhte hain — pehle yahan sirf
+    // date bacha kar time kaat diya jaata tha. Frontend ISO order (YYYY-MM-DD
+    // HH:MM:SS) bhejta hai, jo _parseDMY() already parse kar leta hai (date
+    // prefix padh kar baaki ignore karta hai) — isliye niche delay-calc aur
+    // derived-dates ke liye alag se strip karne ki zaroorat nahi.
+    const dateOnlyValue = actualValue;
 
     const [sheets] = await db.query('SELECT * FROM fms_sheets WHERE id=?', [req.params.fmsId]);
     if (!sheets[0]) return res.status(404).json({ error: 'FMS not found' });
