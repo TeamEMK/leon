@@ -2098,11 +2098,10 @@ async function deleteTask(id, type) {
 // REVISE DATE MODAL
 // ══════════════════════════════════════════════════════
 function openReviseModal(taskId, taskType) {
-  const today = new Date().toISOString().split('T')[0];
-  // Min date = tomorrow
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const minDate = tomorrow.toISOString().split('T')[0];
+  // Min date = today — pehle tomorrow tha, isliye aaj ki date par click
+  // hi nahi hota tha (jabki aaj ke liye bhi revise karna chahiye, jaise
+  // deadline aaj hi thodi der me aage badhani ho).
+  const minDate = new Date().toISOString().split('T')[0];
 
   document.getElementById('reviseTaskId').value = taskId;
   document.getElementById('reviseTaskType').value = taskType;
