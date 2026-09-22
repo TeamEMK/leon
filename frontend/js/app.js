@@ -374,7 +374,7 @@ function setMinDates() {
 // ══════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════
-const pageTitles = {dashboard:'Dashboard',alltasks:'All Tasks',approvals:'Approvals',leaves:'Leave',query:'Query',users:'Users',profile:'Profile',mis:'MIS Report',fms:'FMS Admin','fms-tasks':'FMS Tasks',records:'Employee Records',newcopy:'New Client Copy',updateclient:'Update Client'};
+const pageTitles = {dashboard:'Dashboard',alltasks:'All Tasks',approvals:'Approvals',leaves:'Leave',query:'Help Ticket',users:'Users',profile:'Profile',mis:'MIS Report',fms:'FMS Admin','fms-tasks':'FMS Tasks',records:'Employee Records',newcopy:'New Client Copy',updateclient:'Update Client'};
 
 // Sidebar par cursor jaate hi (jab wo expand hone lagta hai) koi bhi khula dropdown
 // band kar do — warna native select popup sidebar ke upar overlap dikhta hai.
@@ -398,7 +398,7 @@ const pageTitles = {dashboard:'Dashboard',alltasks:'All Tasks',approvals:'Approv
 // isliye false karte hi feature apne purane data ke saath wapas aa jayega.
 const DISABLED_PAGES = {
   'leaves':    false, // Leave
-  'query':     false, // Query — help-ticket jaisa hi hai: user raise karta hai, HR/Admin answer/reject karte hain
+  'query':     false, // Help Ticket (internal code/API abhi bhi "query" hi kehte hain)
   // FMS ko Google service account chahiye (GOOGLE_CREDENTIALS_B64). Wo set na ho
   // to kuch tootta nahi — sheet wali API saaf error deti hai, list khaali aati
   // hai, aur regular users ko tab dikhta hi nahi (koi doer hi nahi hota).
@@ -665,11 +665,11 @@ async function loadQueries() {
   _queryCanAnswer = !!data.canAnswer;
 
   info.textContent = _queryCanAnswer
-    ? 'You can answer or reject any query. Employees see only their own queries.'
-    : 'Raise a query — HR or Admin will answer it here.';
+    ? 'You can answer or reject any ticket. Employees see only their own tickets.'
+    : 'Raise a ticket — HR or Admin will answer it here.';
 
   if (!_queries.length) {
-    box.innerHTML = '<div style="padding:30px;color:var(--muted-foreground);font-size:13px;text-align:center">No queries yet.</div>';
+    box.innerHTML = '<div style="padding:30px;color:var(--muted-foreground);font-size:13px;text-align:center">No tickets yet.</div>';
   } else if (_queryCanAnswer) {
     box.innerHTML = _renderQueriesGrouped(_queries);
   } else {
@@ -744,8 +744,8 @@ function _renderQueryCard(q) {
       <span style="font-size:11px;color:var(--muted-foreground)">🕒 ${escapeHtml(q.created_at || '')}</span>
       <div style="display:flex;align-items:center;gap:8px">
         ${_queryStatusBadge(q.status)}
-        ${canEdit ? `<button title="Edit query" onclick="openEditQuery(${q.id})" style="background:none;border:none;cursor:pointer;color:var(--chart-1);font-size:14px;padding:2px 4px;line-height:1">✏️</button>` : ''}
-        ${canDelete ? `<button title="Delete query" onclick="deleteQuery(${q.id})" style="background:none;border:none;cursor:pointer;color:var(--destructive);font-size:14px;padding:2px 4px;line-height:1">🗑</button>` : ''}
+        ${canEdit ? `<button title="Edit ticket" onclick="openEditQuery(${q.id})" style="background:none;border:none;cursor:pointer;color:var(--chart-1);font-size:14px;padding:2px 4px;line-height:1">✏️</button>` : ''}
+        ${canDelete ? `<button title="Delete ticket" onclick="deleteQuery(${q.id})" style="background:none;border:none;cursor:pointer;color:var(--destructive);font-size:14px;padding:2px 4px;line-height:1">🗑</button>` : ''}
       </div>
     </div>
     <div style="font-size:14px;color:var(--foreground);white-space:pre-wrap;line-height:1.5">${escapeHtml(q.message)}</div>
@@ -755,10 +755,10 @@ function _renderQueryCard(q) {
 }
 
 async function deleteQuery(id) {
-  if (!await confirmDialog('Delete this query permanently? This cannot be undone.', { title: 'Delete Query', okText: 'Delete', danger: true })) return;
+  if (!await confirmDialog('Delete this ticket permanently? This cannot be undone.', { title: 'Delete Ticket', okText: 'Delete', danger: true })) return;
   const r = await api(`/api/queries/${id}`, 'DELETE');
   if (r.error) { showToast(r.error, 'error'); return; }
-  showToast('Query deleted');
+  showToast('Ticket deleted');
   loadQueries();
 }
 
@@ -767,8 +767,8 @@ async function deleteQuery(id) {
 let _editQueryId = null;
 function openNewQuery() {
   _editQueryId = null;
-  document.getElementById('newQueryTitle').textContent = '❓ New Query';
-  document.getElementById('sendQueryBtn').textContent = 'Send Query';
+  document.getElementById('newQueryTitle').textContent = '❓ New Help Ticket';
+  document.getElementById('sendQueryBtn').textContent = 'Submit Ticket';
   document.getElementById('newQueryErr').style.display = 'none';
   document.getElementById('newQueryText').value = '';
   document.getElementById('newQueryModal').classList.add('open');
@@ -778,9 +778,9 @@ function openNewQuery() {
 function openEditQuery(id) {
   const q = _queries.find(x => x.id === id);
   if (!q) return;
-  if (q.status !== 'open') { showToast('Answered or rejected queries cannot be edited', 'error'); return; }
+  if (q.status !== 'open') { showToast('Answered or rejected tickets cannot be edited', 'error'); return; }
   _editQueryId = id;
-  document.getElementById('newQueryTitle').textContent = '✏️ Edit Query';
+  document.getElementById('newQueryTitle').textContent = '✏️ Edit Ticket';
   document.getElementById('sendQueryBtn').textContent = 'Save Changes';
   document.getElementById('newQueryErr').style.display = 'none';
   document.getElementById('newQueryText').value = q.message || '';
@@ -794,7 +794,7 @@ async function submitNewQuery() {
   if (_qSubmitting) return;
   const err = document.getElementById('newQueryErr');
   const message = document.getElementById('newQueryText').value.trim();
-  if (!message) { err.textContent = 'Please type your query.'; err.style.display = 'block'; return; }
+  if (!message) { err.textContent = 'Please type your request.'; err.style.display = 'block'; return; }
   const isEdit = !!_editQueryId;
   const btn = document.getElementById('sendQueryBtn');
   _qSubmitting = true;
@@ -805,13 +805,13 @@ async function submitNewQuery() {
       : await api('/api/queries', 'POST', { message });
     if (r.error) { err.textContent = r.error; err.style.display = 'block'; return; }
     closeModal('newQueryModal');
-    showToast(isEdit ? '✅ Query updated!' : '✅ Query sent!');
+    showToast(isEdit ? '✅ Ticket updated!' : '✅ Ticket submitted!');
     _editQueryId = null;
     if (document.getElementById('page-query').classList.contains('active')) loadQueries();
     else loadQueryBadge();
   } finally {
     _qSubmitting = false;
-    if (btn) { btn.disabled = false; btn.textContent = isEdit ? 'Save Changes' : 'Send Query'; }
+    if (btn) { btn.disabled = false; btn.textContent = isEdit ? 'Save Changes' : 'Submit Ticket'; }
   }
 }
 
@@ -843,11 +843,11 @@ async function answerQuery() {
 
 async function rejectQuery() {
   const reason = document.getElementById('rqAnswer').value.trim();
-  if (!await confirmDialog('Reject this query? The employee will see it as rejected.', {title:'Reject Query', okText:'Reject', danger:true})) return;
+  if (!await confirmDialog('Reject this ticket? The employee will see it as rejected.', {title:'Reject Ticket', okText:'Reject', danger:true})) return;
   const r = await api(`/api/queries/${_resolveQueryId}/reject`, 'PUT', { reason });
   if (r.error) { document.getElementById('resolveQueryErr').textContent = r.error; document.getElementById('resolveQueryErr').style.display = 'block'; return; }
   closeModal('resolveQueryModal');
-  showToast('Query rejected');
+  showToast('Ticket rejected');
   loadQueries();
 }
 
