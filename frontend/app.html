@@ -143,6 +143,10 @@
       </div>
       <div class="dash-topbar-btns" id="dashBtns"></div>
     </div>
+
+    <!-- Aaj kaun leave par hai — sab employees ko dikhta hai. Leave approve
+         hote hi yahan apne aap aa jaata hai (aur date nikalte hi hat jaata hai). -->
+    <div id="dashLeaveTodayBanner" style="display:none;background:color-mix(in srgb,var(--warning) 12%,transparent);border:1px solid color-mix(in srgb,var(--warning) 28%,transparent);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:color-mix(in srgb,var(--warning) 80%,var(--foreground));display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>
     <div class="overview-cards">
       <div class="ov-card total clickable"     id="card-all"       onclick="selectDashCard('all')"       title="Show all tasks below"><div class="label">Total Tasks</div><div class="number" id="dTotal">—</div></div>
       <!-- "Upcoming (this month)" card yahan se hata diya gaya. Upcoming tasks
@@ -1301,6 +1305,16 @@
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;cursor:pointer;text-transform:none;letter-spacing:0"><input type="checkbox" class="woff-cb" value="6" style="accent-color:var(--primary)"/> Sat</label>
         </div>
       </div>
+    </div>
+    <!-- Leave approver — sirf ye check kiye hue users (+ Admin) leave requests
+         approve/reject kar sakte hain. Role/department se hatkar dedicated
+         flag, taaki ek khaas banda hi ye kaam kare, koi aur nahi. -->
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:var(--foreground);cursor:pointer">
+        <input type="checkbox" id="uIsLeaveApprover" style="accent-color:var(--primary);width:16px;height:16px"/>
+        Can approve leave requests
+      </label>
+      <div style="font-size:11px;color:var(--muted-foreground);margin-top:4px">Only users with this checked (plus Admin) will see and act on the Leave Requests approval queue.</div>
     </div>
     <!-- Extra Off Section -->
     <div class="form-group">

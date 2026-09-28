@@ -251,8 +251,8 @@ async function init() {
       const fmsTab = document.getElementById('misTabFMS');
       if (fmsTab) fmsTab.style.display = 'none';
     }
-    // Approvals admin / HOD / PC ko, aur HR ko (leave approve karne ke liye)
-    if (ME.role === 'admin' || ME.role === 'hod' || ME.role === 'pc' || isHR()) {
+    // Approvals admin / HOD / PC ko, aur designated leave-approver ko
+    if (ME.role === 'admin' || ME.role === 'hod' || ME.role === 'pc' || isLeaveApprover()) {
       document.getElementById('nav-approvals').style.display = 'flex';
     }
     // Records tab temporarily disabled
@@ -597,6 +597,11 @@ async function cancelLeave(id) {
 // HR = jiska department "HR" ho (role chahe 'user' hi ho) — sabki leave approve kar sakta hai
 function isHR() { return !!(ME && (ME.department || '').trim().toLowerCase() === 'hr'); }
 
+// Leave approve/reject sirf isi flag wale users kar sakte hain (+ admin).
+// Pehle admin/HOD/HR-department sabko access tha — ab ek dedicated per-user
+// flag hai (Users page se admin set karta hai), taaki sirf ek khaas banda ho.
+function isLeaveApprover() { return !!(ME && (ME.is_leave_approver === true || ME.is_leave_approver === 't' || Number(ME.is_leave_approver) === 1)); }
+
 // Office / Factory badge — leave list me dikhta hai taaki HR ko pata chale banda kis segment ka hai
 function staffTypeBadge(st) {
   return st === 'factory'
@@ -607,13 +612,25 @@ function staffTypeBadge(st) {
 async function loadLeaveBadge() {
   const badge = document.getElementById('leaveBadge');
   if (!badge || !ME) return;
-  if (ME.role !== 'admin' && ME.role !== 'hod' && !isHR()) { badge.style.display='none'; return; }
+  if (ME.role !== 'admin' && !isLeaveApprover()) { badge.style.display='none'; return; }
   const rows = await api(withSeg('/api/leaves'));
   if (!Array.isArray(rows)) return;
   const pending = rows.filter(l => l.status === 'pending' && String(l.user_id) !== String(ME.id)).length;
   if (pending > 0) { badge.textContent = pending; badge.style.display = 'flex'; }
   else badge.style.display = 'none';
   setApprovalTabCount('apprCountLeave', pending);
+}
+
+// "Aaj kaun leave par hai" — dashboard ka banner, SAB employees ko dikhta hai
+// (approve hote hi yahan apne aap aa jaata hai, date nikalte hi hat jaata hai).
+async function loadLeaveToday() {
+  const el = document.getElementById('dashLeaveTodayBanner');
+  if (!el) return;
+  const rows = await api('/api/leaves/today');
+  if (!Array.isArray(rows) || !rows.length) { el.style.display = 'none'; return; }
+  const names = rows.map(r => `<strong>${escapeHtml(r.name)}</strong>${r.department ? ` <span style="opacity:.75">(${escapeHtml(r.department)})</span>` : ''}`).join(', ');
+  el.innerHTML = `🌴 <span>On leave today: ${names}</span>`;
+  el.style.display = 'flex';
 }
 
 // ══════════════════════════════════════════════════════
@@ -978,6 +995,7 @@ async function loadDashboard() {
   }
 
   loadDashFMS(); // fire-and-forget — sabse dheema hai (Google Sheets), isliye sabse pehle shuru
+  if (!isPageDisabled('leaves')) loadLeaveToday(); // "Aaj kaun leave par hai" banner — sabko dikhta hai
 
   const [dDel, dChl] = await delChlPromise;
 
@@ -2886,6 +2904,7 @@ function openAddUser() {
   document.getElementById('userModalTitle').textContent='Add User';
   ['editUserId','uName','uEmail','uNotifEmail','uPhone','uPassword'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('uRole').value='user';
+  document.getElementById('uIsLeaveApprover').checked=false;
   setUserViewOnly(false); // naya user by default full access
   document.getElementById('pwdOptional').style.display='none';
   document.getElementById('bulkUserSection').style.display=''; // CSV upload sirf yahan
@@ -2918,6 +2937,7 @@ function openEditUser(id) {
   document.getElementById('uPhone').value=u.phone||'';
   document.getElementById('uPassword').value='';
   document.getElementById('uRole').value=u.role||'user';
+  document.getElementById('uIsLeaveApprover').checked = (u.is_leave_approver === true || u.is_leave_approver === 't' || Number(u.is_leave_approver) === 1);
   document.getElementById('pwdOptional').style.display='inline';
   document.getElementById('bulkUserSection').style.display='none'; // edit me bulk add ka matlab nahi
   document.getElementById('userErr').style.display='none';
@@ -2989,6 +3009,7 @@ async function saveUser() {
   const view_only=document.getElementById('uViewOnly').value==='1'?1:0;
   const week_off=_getWeekOff();
   const extra_off=_getExtraOff();
+  const is_leave_approver=document.getElementById('uIsLeaveApprover').checked?1:0;
   if (!name||!email) { err.textContent='Name and email required'; err.style.display='block'; return; }
   if (!id&&!password) { err.textContent='Password required for new user'; err.style.display='block'; return; }
   if (view_only && String(id) === String(ME.id)) {
@@ -3002,7 +3023,7 @@ async function saveUser() {
   // karke save karne par uska staff_type 'office' set ho jayega. Yahan koi
   // farak nahi padta kyunki feature hata diya gaya hai aur sabhi users
   // 'office' hi hain — par feature wapas laao to ye pehle theek karna.
-  const body={name,email,notification_email,role,view_only,phone,department,week_off,extra_off};
+  const body={name,email,notification_email,role,view_only,phone,department,week_off,extra_off,is_leave_approver};
   if (password) body.password=password;
   const r = id ? await api(`/api/users/${id}`,'PUT',body) : await api('/api/users','POST',body);
   if (r.error) { err.textContent=r.error; err.style.display='block'; return; }
@@ -3131,21 +3152,23 @@ async function loadLeaveApprovals() {
 
 async function loadApprovals() {
   // Leave band hai to Approvals ka "Leave Requests" tab bhi nahi dikhna chahiye.
-  // NOTE: HR wala block neeche seedha Leave tab par le jaata hai — is haal me
-  // uske paas approve karne ko kuch bachta hi nahi, isliye wo bhi skip.
+  // NOTE: designated leave-approver wala block neeche seedha Leave tab par le
+  // jaata hai — is haal me uske paas approve karne ko kuch bachta hi nahi
+  // (task/transfer approvals admin/hod/pc ke paas hain, leave approver ke nahi),
+  // isliye wo bhi skip.
   const leaveOff = isPageDisabled('leaves');
-  if (isHR() && ME.role !== 'admin' && ME.role !== 'hod' && ME.role !== 'pc' && !leaveOff) {
+  if (isLeaveApprover() && ME.role !== 'admin' && ME.role !== 'hod' && ME.role !== 'pc' && !leaveOff) {
     document.getElementById('apprTabTask').style.display = 'none';
     document.getElementById('apprTabLeave').style.display = 'block';
     switchApprovalTab('leave', document.getElementById('apprTabLeave'));
     return;
   }
-  // Show Transfer + Leave tabs for admin/HOD/PC
+  // Show Transfer tab for admin/HOD/PC
   if (ME.role === 'admin' || ME.role === 'hod' || ME.role === 'pc') {
     document.getElementById('apprTabTransfer').style.display = 'block';
   }
-  // Leave approve sirf admin/HOD kar sakte hain
-  if ((ME.role === 'admin' || ME.role === 'hod') && !leaveOff) {
+  // Leave approve sirf designated approver (+ admin) kar sakte hain
+  if ((ME.role === 'admin' || isLeaveApprover()) && !leaveOff) {
     document.getElementById('apprTabLeave').style.display = 'block';
   }
 

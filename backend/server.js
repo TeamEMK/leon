@@ -1454,7 +1454,7 @@ app.get('/api/me', requireAuth, async (req, res) => {
     // extra_off ab usi user query me hai. Alag isliye tha ki purane database me
     // wo column na ho — ab poori query try karke, sirf "column hi nahi hai"
     // (42703) par bina uske dobara poochte hain. Yaani aam haalat me ek hi query.
-    const COLS = 'id,name,email,notification_email,role,view_only,phone,profile_image,department,week_off';
+    const COLS = 'id,name,email,notification_email,role,view_only,phone,profile_image,department,week_off,is_leave_approver';
     const userQ = db.query(`SELECT ${COLS},extra_off FROM users WHERE id=?`, [uid])
       .catch(e => {
         if (e.code !== '42703') throw e;
@@ -2094,6 +2094,8 @@ async function shiftChecklistTasksForLeave(userId, fromISO, toISO) {
 
 // HR department wale users sabki leave dekh/approve kar sakte hain (role
 // chahe 'user' hi ho). Department string se pehchaan — koi extra column nahi.
+// NOTE: Leave approve/reject ab isse nahi, _isLeaveApprover() se control hota
+// hai — ye function video-proof aur help-ticket answering ke liye reh gaya hai.
 async function _isHRUser(uid) {
   try {
     const [r] = await db.query('SELECT department FROM users WHERE id=?', [uid]);
@@ -2101,16 +2103,25 @@ async function _isHRUser(uid) {
   } catch (_) { return false; }
 }
 
-// List — role ke hisaab se: user apni, HOD apne dept ki, admin/pc/HR sabki
+// Leave approve/reject sirf isi flag wale users kar sakte hain (+ admin,
+// jo hamesha ki tarah universal override rakhta hai). Pehle admin/HOD/HR-
+// department sabko access tha; client ne maanga ki sirf ek khaas banda ho —
+// isliye role/department se hatakar ek dedicated per-user column (Users
+// page se admin set karta hai).
+async function _isLeaveApprover(uid) {
+  try {
+    const [r] = await db.query('SELECT is_leave_approver FROM users WHERE id=?', [uid]);
+    return !!(r[0] && (r[0].is_leave_approver === true || r[0].is_leave_approver === 't' || r[0].is_leave_approver === 1));
+  } catch (_) { return false; }
+}
+
+// List — user apni, designated leave-approver (+ admin) sabki
 app.get('/api/leaves', requireAuth, async (req, res) => {
   try {
     const role = req.session.role, uid = req.session.userId;
     let where = '', params = [];
-    if (role === 'admin' || role === 'pc' || await _isHRUser(uid)) {
+    if (role === 'admin' || await _isLeaveApprover(uid)) {
       // sab dikhega
-    } else if (role === 'hod') {
-      const [me] = await db.query('SELECT department FROM users WHERE id=?', [uid]);
-      where = 'WHERE u.department=?'; params = [me[0]?.department || ''];
     } else {
       where = 'WHERE lr.user_id=?'; params = [uid];
     }
@@ -2147,7 +2158,9 @@ app.post('/api/leaves', requireAuth, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
 });
 
-// Approve / reject — admin sabki, HOD sirf apne department ki
+// Approve / reject — sirf designated leave-approver (+ admin, hamesha ki
+// tarah universal override). Pehle admin/HOD(apne dept)/HR-department sabko
+// access tha — client ne maanga ki sirf ek khaas banda ho.
 app.put('/api/leaves/:id', requireAuth, async (req, res) => {
   try {
     const { action } = req.body;
@@ -2164,12 +2177,7 @@ app.put('/api/leaves/:id', requireAuth, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: 'Leave request not found' });
     const lv = rows[0];
 
-    let allowed = role === 'admin';
-    if (!allowed && role === 'hod') {
-      const [me] = await db.query('SELECT department FROM users WHERE id=?', [uid]);
-      allowed = (me[0]?.department || '') === (lv.department || '');
-    }
-    if (!allowed) allowed = await _isHRUser(uid); // HR sabki approve kar sakta hai
+    const allowed = role === 'admin' || await _isLeaveApprover(uid);
     if (!allowed) return res.status(403).json({ error: 'Not allowed' });
     if (lv.status !== 'pending') return res.status(400).json({ error: 'This request has already been decided' });
     if (lv.user_id === uid) return res.status(400).json({ error: 'You cannot approve your own leave' });
@@ -2217,6 +2225,22 @@ app.delete('/api/leaves/:id', requireAuth, async (req, res) => {
     if (!isAdmin && lv.status !== 'pending') return res.status(400).json({ error: 'A leave that has already been decided cannot be cancelled' });
     await db.query('DELETE FROM leave_requests WHERE id=?', [req.params.id]);
     res.json({ success: true });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
+});
+
+// Aaj kaun-kaun leave par hai — dashboard banner ke liye, SAB logged-in users
+// dekh sakte hain (role koi bhi ho). Sirf approved leaves, jinme aaj ki date
+// from/to ke beech aati hai.
+app.get('/api/leaves/today', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT u.name, u.department, lr.leave_type,
+              TO_CHAR(lr.from_date,'YYYY-MM-DD') AS from_date,
+              TO_CHAR(lr.to_date,'YYYY-MM-DD') AS to_date
+       FROM leave_requests lr JOIN users u ON lr.user_id=u.id
+       WHERE lr.status='approved' AND CURRENT_DATE BETWEEN lr.from_date AND lr.to_date
+       ORDER BY u.name ASC`);
+    res.json(rows);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
 });
 
