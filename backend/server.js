@@ -2103,11 +2103,10 @@ async function _isHRUser(uid) {
   } catch (_) { return false; }
 }
 
-// Leave approve/reject sirf isi flag wale users kar sakte hain (+ admin,
-// jo hamesha ki tarah universal override rakhta hai). Pehle admin/HOD/HR-
-// department sabko access tha; client ne maanga ki sirf ek khaas banda ho —
-// isliye role/department se hatakar ek dedicated per-user column (Users
-// page se admin set karta hai).
+// Leave approve/reject SIRF isi flag wale users kar sakte hain — admin ke
+// liye bhi koi exception nahi (client ne explicitly confirm kiya). Pehle
+// admin/HOD/HR-department sabko access tha; ab role/department se hatakar
+// ek dedicated per-user column hai (Users page se admin set karta hai).
 async function _isLeaveApprover(uid) {
   try {
     const [r] = await db.query('SELECT is_leave_approver FROM users WHERE id=?', [uid]);
@@ -2115,12 +2114,13 @@ async function _isLeaveApprover(uid) {
   } catch (_) { return false; }
 }
 
-// List — user apni, designated leave-approver (+ admin) sabki
+// List — user apni, designated leave-approver sabki (admin bhi nahi —
+// client ne explicitly maanga ki sirf flag wala banda, koi exception nahi)
 app.get('/api/leaves', requireAuth, async (req, res) => {
   try {
-    const role = req.session.role, uid = req.session.userId;
+    const uid = req.session.userId;
     let where = '', params = [];
-    if (role === 'admin' || await _isLeaveApprover(uid)) {
+    if (await _isLeaveApprover(uid)) {
       // sab dikhega
     } else {
       where = 'WHERE lr.user_id=?'; params = [uid];
@@ -2158,9 +2158,10 @@ app.post('/api/leaves', requireAuth, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
 });
 
-// Approve / reject — sirf designated leave-approver (+ admin, hamesha ki
-// tarah universal override). Pehle admin/HOD(apne dept)/HR-department sabko
-// access tha — client ne maanga ki sirf ek khaas banda ho.
+// Approve / reject — SIRF designated leave-approver, koi exception nahi.
+// Pehle admin/HOD(apne dept)/HR-department sabko access tha; client ne
+// dobara explicitly confirm kiya ki admin ko bhi nahi — sirf jisko flag
+// kiya gaya hai wahi approve/reject kar sakta hai.
 app.put('/api/leaves/:id', requireAuth, async (req, res) => {
   try {
     const { action } = req.body;
@@ -2168,7 +2169,7 @@ app.put('/api/leaves/:id', requireAuth, async (req, res) => {
     // Isse DB bind (mysql2 array ko '?' me galat expand karta hai) aur WA message dono safe.
     const note = typeof req.body?.note === 'string' ? req.body.note : '';
     if (!['approved','rejected'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
-    const role = req.session.role, uid = req.session.userId;
+    const uid = req.session.userId;
     const [rows] = await db.query(
       `SELECT lr.*, TO_CHAR(lr.from_date,'YYYY-MM-DD') AS from_iso,
               TO_CHAR(lr.to_date,'YYYY-MM-DD') AS to_iso,
@@ -2177,7 +2178,7 @@ app.put('/api/leaves/:id', requireAuth, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: 'Leave request not found' });
     const lv = rows[0];
 
-    const allowed = role === 'admin' || await _isLeaveApprover(uid);
+    const allowed = await _isLeaveApprover(uid);
     if (!allowed) return res.status(403).json({ error: 'Not allowed' });
     if (lv.status !== 'pending') return res.status(400).json({ error: 'This request has already been decided' });
     if (lv.user_id === uid) return res.status(400).json({ error: 'You cannot approve your own leave' });

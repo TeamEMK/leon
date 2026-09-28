@@ -612,7 +612,7 @@ function staffTypeBadge(st) {
 async function loadLeaveBadge() {
   const badge = document.getElementById('leaveBadge');
   if (!badge || !ME) return;
-  if (ME.role !== 'admin' && !isLeaveApprover()) { badge.style.display='none'; return; }
+  if (!isLeaveApprover()) { badge.style.display='none'; return; }
   const rows = await api(withSeg('/api/leaves'));
   if (!Array.isArray(rows)) return;
   const pending = rows.filter(l => l.status === 'pending' && String(l.user_id) !== String(ME.id)).length;
@@ -3167,8 +3167,9 @@ async function loadApprovals() {
   if (ME.role === 'admin' || ME.role === 'hod' || ME.role === 'pc') {
     document.getElementById('apprTabTransfer').style.display = 'block';
   }
-  // Leave approve sirf designated approver (+ admin) kar sakte hain
-  if ((ME.role === 'admin' || isLeaveApprover()) && !leaveOff) {
+  // Leave approve SIRF designated approver kar sakta hai — admin ke liye
+  // bhi koi exception nahi
+  if (isLeaveApprover() && !leaveOff) {
     document.getElementById('apprTabLeave').style.display = 'block';
   }
 
