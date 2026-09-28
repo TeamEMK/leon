@@ -2245,6 +2245,17 @@ app.get('/api/leaves/today', requireAuth, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
 });
 
+// Kaun leave approve karta hai — Apply Leave form par "Your Approver: <naam>"
+// dikhane ke liye. SAB logged-in users dekh sakte hain (poori users list
+// nahi, sirf approver ke naam — taaki har employee ke Apply Leave khulte
+// waqt org ka poora roster fetch na ho).
+app.get('/api/leaves/approver', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT name FROM users WHERE is_leave_approver=? ORDER BY name ASC', [true]);
+    res.json({ names: rows.map(r => r.name) });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
+});
+
 // ══════════════════════════════════════════════════════
 // MIS
 // ══════════════════════════════════════════════════════

@@ -494,6 +494,21 @@ function openApplyLeave() {
   document.getElementById('lvFrom').value=today;
   document.getElementById('lvTo').value=today;
   document.getElementById('applyLeaveModal').classList.add('open');
+  loadLeaveApproverInfo();
+}
+
+// "Your Approver: <naam>" — jisko bhi Users page se flag kiya gaya hai,
+// department/role koi bhi ho, wahi naam yahan dikhta hai (hardcoded nahi,
+// isliye approver badalne par bhi ye apne aap sahi rahega).
+async function loadLeaveApproverInfo() {
+  const el = document.getElementById('lvApproverInfo');
+  if (!el) return;
+  el.style.display = 'none';
+  const r = await api('/api/leaves/approver');
+  const names = (r && Array.isArray(r.names)) ? r.names : [];
+  if (!names.length) return; // koi flag nahi kiya gaya — chup rehna behtar hai galat naam dikhane se
+  el.innerHTML = `👤 Your Approver: <strong style="color:var(--foreground)">${escapeHtml(names.join(', '))}</strong>`;
+  el.style.display = 'block';
 }
 
 async function submitLeave() {
