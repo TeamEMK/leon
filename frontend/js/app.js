@@ -957,7 +957,7 @@ async function loadDashEmployeeDropdown(isHod) {
     ? users.filter(u => u.department === ME.department)
     : users;
   const prev = empFilter.value;
-  empFilter.innerHTML = '<option value="all">All Employees</option>';
+  empFilter.innerHTML = '<option value="all">Team Member</option>';
   filtered.forEach(u => {
     const opt = document.createElement('option');
     opt.value = u.id; opt.textContent = u.name;
@@ -1079,7 +1079,7 @@ async function refreshPCEmployeeDropdown() {
   const pendingUsers = await api(`/api/users/with-pending-tasks${dateQ}`);
   // Current value save karo
   const currentVal = empFilter.value;
-  empFilter.innerHTML = '<option value="all">All Employees</option>';
+  empFilter.innerHTML = '<option value="all">Team Member</option>';
   (pendingUsers || []).forEach(u => {
     const opt = document.createElement('option');
     opt.value = u.id; opt.textContent = u.name;
