@@ -234,6 +234,7 @@ async function init() {
       document.getElementById('bulkDeleteBtn').style.display = 'inline-flex';
       document.getElementById('bulkEditBtn').style.display = 'inline-flex';
       document.getElementById('misCombinedBtn').style.display = 'inline-flex';
+      document.getElementById('formAddBtn').style.display = 'inline-flex';
     }
     if (ME.role === 'hod') {
       // HOD ko MIS dikhta hai (apne department ka)
@@ -374,7 +375,7 @@ function setMinDates() {
 // ══════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════
-const pageTitles = {dashboard:'Dashboard',alltasks:'All Tasks',approvals:'Approvals',leaves:'Leave',query:'Help Ticket',users:'Users',profile:'Profile',mis:'MIS Report',fms:'FMS Admin','fms-tasks':'FMS Tasks',records:'Employee Records',newcopy:'New Client Copy',updateclient:'Update Client'};
+const pageTitles = {dashboard:'Dashboard',alltasks:'All Tasks',approvals:'Approvals',leaves:'Leave',query:'Help Ticket',users:'Users',profile:'Profile',mis:'MIS Report',fms:'FMS Admin','fms-tasks':'FMS Tasks',forms:'Forms',records:'Employee Records',newcopy:'New Client Copy',updateclient:'Update Client'};
 
 // Sidebar par cursor jaate hi (jab wo expand hone lagta hai) koi bhi khula dropdown
 // band kar do — warna native select popup sidebar ke upar overlap dikhta hai.
@@ -450,6 +451,7 @@ function navigate(page, el) {
   if (page==='mis') initMISDeptFilter();
   if (page==='leaves') loadLeaves();
   if (page==='query') loadQueries();
+  if (page==='forms') loadForms();
   if (page==='records') loadRecords();
   // navigate() core app ka hissa hai, yaani client ki copy me bhi jaata hai —
   // par ncLoadLog generator ke markers ke andar hai aur wahan hota hi nahi.
@@ -646,6 +648,85 @@ async function loadLeaveToday() {
   const names = rows.map(r => `<strong>${escapeHtml(r.name)}</strong>${r.department ? ` <span style="opacity:.75">(${escapeHtml(r.department)})</span>` : ''}`).join(', ');
   el.innerHTML = `🌴 <span>On leave today: ${names}</span>`;
   el.style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════════════
+// FORMS — naam + link ki chhoti list. Click karte hi link naye tab me
+// khulta hai. Jaan-boojh kar itna hi simple hai — FMS jaisa koi Sheet-sync
+// nahi. Add/Edit/Delete sirf Admin (button HTML me hi admin ke liye dikhta
+// hai), dekhna/kholna sab logged-in users kar sakte hain.
+// ══════════════════════════════════════════════════════
+async function loadForms() {
+  const box = document.getElementById('formsContent');
+  box.innerHTML = '<div style="padding:20px;color:var(--muted-foreground);font-size:13px;text-align:center">Loading…</div>';
+  const rows = await api('/api/forms');
+  if (rows.error) { box.innerHTML = `<div style="padding:20px;color:var(--destructive)">${escapeHtml(rows.error)}</div>`; return; }
+  _forms = rows || [];
+  if (!_forms.length) {
+    box.innerHTML = `<div class="empty" style="background:var(--card);border-radius:12px;border:1px solid var(--border);">No forms added yet.${ME.role==='admin' ? ' Click "+ Add New Form" to get started.' : ''}</div>`;
+    return;
+  }
+  const isAdmin = ME.role === 'admin';
+  box.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">` +
+    _forms.map(f => `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:14px;font-weight:600;color:var(--foreground);word-break:break-word">📄 ${escapeHtml(f.name)}</div>
+        <div style="display:flex;gap:6px;margin-top:auto">
+          <a class="btn btn-primary btn-sm" style="flex:1;justify-content:center" href="${escapeHtml(f.link)}" target="_blank" rel="noopener noreferrer">Open ↗</a>
+          ${isAdmin ? `<button class="action-btn edit" onclick="openEditForm(${f.id})" title="Edit">✏️</button>
+          <button class="action-btn delete" onclick="deleteForm(${f.id})" title="Delete">🗑️</button>` : ''}
+        </div>
+      </div>`).join('') +
+    `</div>`;
+}
+
+let _forms = [];
+let _editFormId = null;
+
+function openAddForm() {
+  _editFormId = null;
+  document.getElementById('formAddTitle').textContent = '+ Add New Form';
+  document.getElementById('formSaveBtn').textContent = 'Save';
+  document.getElementById('formName').value = '';
+  document.getElementById('formLink').value = '';
+  document.getElementById('formAddErr').style.display = 'none';
+  document.getElementById('formAddModal').classList.add('open');
+}
+
+function openEditForm(id) {
+  const f = _forms.find(x => x.id === id);
+  if (!f) return;
+  _editFormId = id;
+  document.getElementById('formAddTitle').textContent = '✏️ Edit Form';
+  document.getElementById('formSaveBtn').textContent = 'Save Changes';
+  document.getElementById('formName').value = f.name;
+  document.getElementById('formLink').value = f.link;
+  document.getElementById('formAddErr').style.display = 'none';
+  document.getElementById('formAddModal').classList.add('open');
+}
+
+async function saveForm() {
+  const err = document.getElementById('formAddErr');
+  err.style.display = 'none';
+  const name = document.getElementById('formName').value.trim();
+  const link = document.getElementById('formLink').value.trim();
+  if (!name) { err.textContent = 'Form name is required'; err.style.display = 'block'; return; }
+  if (!/^https?:\/\//i.test(link)) { err.textContent = 'Link must start with http:// or https://'; err.style.display = 'block'; return; }
+  const r = _editFormId
+    ? await api(`/api/forms/${_editFormId}`, 'PUT', { name, link })
+    : await api('/api/forms', 'POST', { name, link });
+  if (r.error) { err.textContent = r.error; err.style.display = 'block'; return; }
+  closeModal('formAddModal');
+  showToast(_editFormId ? 'Form updated!' : 'Form added!');
+  loadForms();
+}
+
+async function deleteForm(id) {
+  if (!await confirmDialog('Delete this form?', { title: 'Delete Form', okText: 'Delete', danger: true })) return;
+  const r = await api(`/api/forms/${id}`, 'DELETE');
+  if (r.error) { showToast(r.error, 'error'); return; }
+  showToast('Form deleted');
+  loadForms();
 }
 
 // ══════════════════════════════════════════════════════

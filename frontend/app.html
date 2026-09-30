@@ -89,6 +89,10 @@
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 6h18M3 18h18"/></svg>
       <span class="nav-label-text">FMS Tasks</span>
     </div>
+    <div class="nav-item" id="nav-forms" onclick="navigate('forms',this)">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+      <span class="nav-label-text">Forms</span>
+    </div>
     <div class="nav-divider"></div>
     <div class="nav-item" onclick="navigate('profile',this)">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
@@ -671,6 +675,17 @@
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════
+       FORMS — naam + link ki chhoti list. Click karte hi link naye tab me
+       khulta hai. Add/Edit/Delete sirf Admin; dekhna/kholna sab kar sakte hain.
+  ══════════════════════════════════════ -->
+  <div id="page-forms" class="page">
+    <div class="page-header">
+      <div></div>
+      <button class="btn btn-primary" id="formAddBtn" style="display:none" onclick="openAddForm()">+ Add New Form</button>
+    </div>
+    <div id="formsContent"></div>
+  </div>
 
 </div>
 
@@ -1075,6 +1090,29 @@
     <div class="modal-footer" style="justify-content:space-between">
       <button class="btn btn-outline" onclick="closeModal('fmsAddModal')">Cancel</button>
       <button class="btn btn-primary" onclick="proceedToShareNotice()">Config Now →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     FORMS — ADD/EDIT MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="formAddModal">
+  <div class="modal" style="max-width:480px">
+    <h3 id="formAddTitle">+ Add New Form</h3>
+    <input type="hidden" id="formEditId"/>
+    <div class="alert error" id="formAddErr"></div>
+    <div class="form-group">
+      <label>Form Name <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(shown in the list)</span></label>
+      <input type="text" id="formName" placeholder="e.g. Vendor Onboarding, Feedback Form"/>
+    </div>
+    <div class="form-group">
+      <label>Form Link <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(opens in a new tab when clicked)</span></label>
+      <input type="url" id="formLink" placeholder="https://forms.google.com/…"/>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-outline" onclick="closeModal('formAddModal')">Cancel</button>
+      <button class="btn btn-primary" id="formSaveBtn" onclick="saveForm()">Save</button>
     </div>
   </div>
 </div>
