@@ -711,8 +711,19 @@
     <div class="alert error" id="delegateErr"></div>
     <div class="form-row">
       <div class="form-group">
-        <label>Doer (Assign To)</label>
-        <select id="dDoer"><option value="">Select Doer</option></select>
+        <label>Doer(s) <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(assign to one or more)</span></label>
+        <div class="multi-select-wrap" id="dDoerWrap">
+          <div class="selected-tags" id="dDoerTags" onclick="toggleMultiSelectDropdown('dDoer')">
+            <span style="color:var(--muted-foreground);font-size:12px">Select employee(s)...</span>
+          </div>
+          <div class="multi-select-dropdown" id="dDoerDrop">
+            <div class="multi-select-search">
+              <input type="text" placeholder="Search..." autocomplete="off" oninput="filterMultiSelectUsers('dDoer', this.value)" onclick="event.stopPropagation()"/>
+            </div>
+            <div id="dDoerList"></div>
+            <div id="dDoerNoMatch" style="display:none;padding:10px 12px;font-size:12px;color:var(--muted-foreground)">No users match</div>
+          </div>
+        </div>
       </div>
       <div class="form-group">
         <label>Due Date</label>
@@ -784,8 +795,19 @@
     <div class="alert success" id="checklistSuccess"></div>
 
     <div class="form-group">
-      <label>Select Employee</label>
-      <select id="cDoer"><option value="">Select Employee</option></select>
+      <label>Employee(s) <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(assign to one or more)</span></label>
+      <div class="multi-select-wrap" id="cDoerWrap">
+        <div class="selected-tags" id="cDoerTags" onclick="toggleMultiSelectDropdown('cDoer')">
+          <span style="color:var(--muted-foreground);font-size:12px">Select employee(s)...</span>
+        </div>
+        <div class="multi-select-dropdown" id="cDoerDrop">
+          <div class="multi-select-search">
+            <input type="text" placeholder="Search..." autocomplete="off" oninput="filterMultiSelectUsers('cDoer', this.value)" onclick="event.stopPropagation()"/>
+          </div>
+          <div id="cDoerList"></div>
+          <div id="cDoerNoMatch" style="display:none;padding:10px 12px;font-size:12px;color:var(--muted-foreground)">No users match</div>
+        </div>
+      </div>
     </div>
 
     <div class="form-group">

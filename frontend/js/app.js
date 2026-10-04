@@ -2374,6 +2374,91 @@ async function transferToday(userId) {
 }
 
 // ══════════════════════════════════════════════════════
+// GENERIC MULTI-SELECT USER PICKER
+// ══════════════════════════════════════════════════════
+// Delegate aur Checklist modal — "ek employee" ko "kai employees" me badalne
+// ke liye. FMS ka apna multi-select (setupMultiSelect waghera) step ke numeric
+// idx se bana hai; ye prefix (string) se, taaki kahin bhi reuse ho sake —
+// seedha ek select ki jagah drop-in.
+const _msState = {}; // prefix -> { users:[...], selected:[ids], _outsideBound }
+
+function renderMultiSelectUsers(prefix, users, selected) {
+  _msState[prefix] = { users, selected: (selected||[]).map(Number), _outsideBound: _msState[prefix]?._outsideBound };
+  const list = document.getElementById(`${prefix}List`);
+  if (!list) return;
+  list.innerHTML = users.map(u => `
+    <div class="multi-select-item" data-uid="${u.id}" onclick="toggleMultiSelectUser('${prefix}',${u.id})">
+      <input type="checkbox" ${_msState[prefix].selected.includes(Number(u.id))?'checked':''}/> ${escapeHtml(u.name)}
+    </div>`).join('');
+  updateMultiSelectTags(prefix);
+  _msSetupOutsideClick(prefix);
+}
+
+function toggleMultiSelectUser(prefix, uid) {
+  uid = Number(uid);
+  const st = _msState[prefix];
+  if (!st) return;
+  const i = st.selected.indexOf(uid);
+  if (i === -1) st.selected.push(uid); else st.selected.splice(i, 1);
+  const drop = document.getElementById(`${prefix}Drop`);
+  if (drop) {
+    drop.querySelectorAll('.multi-select-item').forEach(item => {
+      const itemUid = Number(item.dataset.uid);
+      const cb = item.querySelector('input[type=checkbox]');
+      if (cb) cb.checked = st.selected.includes(itemUid);
+    });
+  }
+  updateMultiSelectTags(prefix);
+}
+
+function updateMultiSelectTags(prefix) {
+  const tags = document.getElementById(`${prefix}Tags`);
+  const st = _msState[prefix];
+  if (!tags || !st) return;
+  if (!st.selected.length) { tags.innerHTML = `<span style="color:var(--muted-foreground);font-size:12px">Select employee(s)...</span>`; return; }
+  const names = st.selected.map(uid => { const u = st.users.find(u => Number(u.id) === uid); return u ? u.name : ''; }).filter(Boolean);
+  tags.innerHTML = names.map(n => `<span class="tag-badge">${escapeHtml(n)}</span>`).join('');
+}
+
+function toggleMultiSelectDropdown(prefix) {
+  const drop = document.getElementById(`${prefix}Drop`);
+  if (drop) drop.classList.toggle('open');
+}
+
+// Naam se list chhaanto. Chune hue hamesha dikhte hain, warna filter karte
+// hi lagta hai ki selection udd gayi (FMS wale pattern jaisa hi).
+function filterMultiSelectUsers(prefix, term) {
+  const q = (term || '').trim().toLowerCase();
+  const list = document.getElementById(`${prefix}List`);
+  const st = _msState[prefix];
+  if (!list || !st) return;
+  let shown = 0;
+  list.querySelectorAll('.multi-select-item').forEach(item => {
+    const uid = Number(item.dataset.uid);
+    const name = (item.textContent || '').trim().toLowerCase();
+    const visible = !q || name.includes(q) || st.selected.includes(uid);
+    item.style.display = visible ? '' : 'none';
+    if (visible) shown++;
+  });
+  const none = document.getElementById(`${prefix}NoMatch`);
+  if (none) none.style.display = shown ? 'none' : 'block';
+}
+
+function _msSetupOutsideClick(prefix) {
+  if (_msState[prefix]._outsideBound) return; // ek hi baar bind karo
+  _msState[prefix]._outsideBound = true;
+  document.addEventListener('click', function (e) {
+    const drop = document.getElementById(`${prefix}Drop`);
+    const wrap = document.getElementById(`${prefix}Wrap`);
+    if (drop && wrap && !wrap.contains(e.target)) drop.classList.remove('open');
+  });
+}
+
+function getMultiSelectIds(prefix) {
+  return (_msState[prefix]?.selected || []).slice();
+}
+
+// ══════════════════════════════════════════════════════
 // DELEGATE MODAL
 // ══════════════════════════════════════════════════════
 async function openDelegate() {
@@ -2390,8 +2475,7 @@ async function openDelegate() {
   document.getElementById('dDate').min=today;
   document.getElementById('dDate').disabled=false;
   const users = await api(withSeg('/api/users'));  // current view (office/factory) ke doers hi
-  const opts = users.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
-  document.getElementById('dDoer').innerHTML='<option value="">Select Doer</option>'+opts;
+  renderMultiSelectUsers('dDoer', users, []);
   document.getElementById('delegateModal').classList.add('open');
 }
 
@@ -2405,7 +2489,7 @@ function onAwaitingDueDateChange() {
 async function saveDelegate() {
   const err = document.getElementById('delegateErr');
   err.style.display='none';
-  const doer = document.getElementById('dDoer').value;
+  const doers = getMultiSelectIds('dDoer');
   const awaitingDueDate = document.getElementById('dAwaitingDueDate').checked;
   const date = document.getElementById('dDate').value;
   const desc = document.getElementById('dDesc').value.trim();
@@ -2413,13 +2497,20 @@ async function saveDelegate() {
   const approval = document.getElementById('dApproval').value;
   const remarks = document.getElementById('dRemarks').value.trim();
   const url = document.getElementById('dUrl').value.trim();
-  if (!doer) { err.textContent='Please select a doer'; err.style.display='block'; return; }
+  if (!doers.length) { err.textContent='Please select at least one doer'; err.style.display='block'; return; }
   if (!awaitingDueDate && !date) { err.textContent='Please select a date'; err.style.display='block'; return; }
   if (!desc) { err.textContent='Description is required'; err.style.display='block'; return; }
-  const r = await api('/api/tasks','POST',{type:'delegation',desc,assignedTo:doer,date,priority,approval,remarks,url,awaitingDueDate});
-  if (r && r.error) { err.textContent=r.error; err.style.display='block'; return; }
+  // Kai doer chuno to har ek ke liye alag task banta hai — endpoint khud ek
+  // doer leta hai, isliye yahan loop karte hain.
+  let failMsg = null, okCount = 0;
+  for (const doer of doers) {
+    const r = await api('/api/tasks','POST',{type:'delegation',desc,assignedTo:doer,date,priority,approval,remarks,url,awaitingDueDate});
+    if (r && r.error) failMsg = failMsg || r.error; else okCount++;
+  }
+  if (!okCount) { err.textContent = failMsg || 'Failed to delegate task'; err.style.display='block'; return; }
   closeModal('delegateModal');
-  showToast('Task delegated successfully!');
+  showToast(okCount > 1 ? `Task delegated to ${okCount} people!` : 'Task delegated successfully!');
+  if (failMsg) showToast(`Some doers failed: ${failMsg}`, 'error');
   loadDashboard();
 }
 
@@ -2440,8 +2531,7 @@ async function openChecklist() {
   document.getElementById('cDate').min=today;
   document.getElementById('cEndDate').min=today;
   const users = await api(withSeg('/api/users'));  // current view (office/factory) ke doers hi
-  document.getElementById('cDoer').innerHTML='<option value="">Select Employee</option>'+
-    users.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  renderMultiSelectUsers('cDoer', users, []);
 
   ['cFrequency','cDate','cEndDate','cDesc'].forEach(id=>{
     document.getElementById(id).onchange = updateChecklistPreview;
@@ -2538,49 +2628,55 @@ async function saveChecklist() {
   const suc = document.getElementById('checklistSuccess');
   err.style.display='none'; suc.style.display='none';
 
-  const doer     = document.getElementById('cDoer').value;
+  const doers    = getMultiSelectIds('cDoer');
   const date     = document.getElementById('cDate').value;
   const endDate  = document.getElementById('cEndDate').value;
   const desc     = document.getElementById('cDesc').value.trim();
   const remarks  = document.getElementById('cRemarks').value.trim();
   const freq     = document.getElementById('cFrequency').value;
 
-  if (!doer) { err.textContent='Please select an employee'; err.style.display='block'; return; }
+  if (!doers.length) { err.textContent='Please select at least one employee'; err.style.display='block'; return; }
   if (!date) { err.textContent='Please select a start date'; err.style.display='block'; return; }
   if (!desc) { err.textContent='Task name is required'; err.style.display='block'; return; }
 
   const btn = document.getElementById('cGenerateBtn');
   btn.disabled=true; btn.textContent='Generating…';
 
-  // Get user's week_off to skip those days
+  // Har employee ka apna week_off/extra_off ho sakta hai, isliye dates bhi
+  // har ek ke liye alag se nikalni padti hain — sirf assignedTo badal kar
+  // ek hi dates list sabke liye reuse nahi ho sakti.
   const allUsers = await api('/api/users');
-  const selUser = allUsers.find(u=>String(u.id)===String(doer));
-  const weekOff = selUser?.week_off || '';
-  const extraOff = selUser?.extra_off || '';
+  let totalTasks = 0, sentTo = 0, anyWeekOff = false, failedNames = [], errMsgSample = null;
+  for (const doer of doers) {
+    const selUser = allUsers.find(u=>String(u.id)===String(doer));
+    const weekOff = selUser?.week_off || '';
+    const extraOff = selUser?.extra_off || '';
+    if (weekOff) anyWeekOff = true;
+    const dates = generateDates(date, freq, weekOff, extraOff, endDate);
+    if (!dates.length) { failedNames.push(selUser?.name || doer); continue; }
+    const result = await api('/api/tasks/bulk-checklist','POST',{
+      desc, assignedTo: doer, priority: 'low', remarks, dates, frequency: freq
+    });
+    if (result.error) { failedNames.push(selUser?.name || doer); errMsgSample = errMsgSample || result.error; continue; }
+    totalTasks += dates.length;
+    sentTo++;
+  }
 
-  const dates = generateDates(date, freq, weekOff, extraOff, endDate);
+  btn.disabled=false; btn.textContent='Generate Tasks';
 
   // Sunday par padne wale occurrences bante hi nahi. Weekly/monthly task agar
   // Sunday se shuru ho to har occurrence Sunday par gir sakti hai aur ek bhi
   // task nahi banega — us soorat me chup rehne ke bajaye saaf bata do.
-  if (!dates.length) {
-    btn.disabled=false; btn.textContent='Generate Tasks';
-    err.textContent = new Date(date+'T00:00:00').getDay() === 0
+  if (!totalTasks) {
+    err.textContent = errMsgSample || (new Date(date+'T00:00:00').getDay() === 0
       ? 'Start date is a Sunday and Sunday tasks are skipped — please pick another start date.'
-      : 'No dates could be generated — please check the start date, end date and week off settings.';
+      : 'No dates could be generated — please check the start date, end date and week off settings.');
     err.style.display='block';
     return;
   }
 
-  const result = await api('/api/tasks/bulk-checklist','POST',{
-    desc, assignedTo: doer, priority: 'low', remarks, dates, frequency: freq
-  });
-
-  btn.disabled=false; btn.textContent='Generate Tasks';
-
-  if (result.error) { err.textContent=result.error; err.style.display='block'; return; }
-
-  suc.textContent = `✅ ${dates.length} tasks generated! (Sundays skipped${weekOff ? ', week off days skipped' : ''})`;
+  suc.textContent = `✅ ${totalTasks} task(s) generated across ${sentTo} employee(s)! (Sundays skipped${anyWeekOff ? ', week off days skipped' : ''})`
+    + (failedNames.length ? ` — skipped: ${failedNames.join(', ')}` : '');
   suc.style.display='block';
 
   setTimeout(()=>{ closeModal('checklistModal'); loadDashboard(); }, 2000);
