@@ -112,7 +112,7 @@ function buildPendingWhatsAppMessage(userName, tasks, todayDMY, todayISO) {
   return lines.join('\n');
 }
 
-const _LEAVE_TYPE_LABEL = { full_day: 'Full Day', half_day: 'Half Day', work_from_home: 'Work From Home' };
+const _LEAVE_TYPE_LABEL = { full_day: 'Full Day', half_day: 'Half Day', early_go: 'Early Go', long_leave: 'Long Leave', work_from_home: 'Work From Home' };
 
 // Leave approve/reject hone par applicant ko jaane wala WhatsApp message.
 function buildLeaveDecisionMessage({ name, action, leaveType, fromISO, toISO, approver, note }) {

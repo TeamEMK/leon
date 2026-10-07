@@ -481,7 +481,7 @@ function _restoreActivePage() {
 // ══════════════════════════════════════════════════════
 // extra_working ab apply karne ke liye offer nahi hota, lekin label yahan rakha hai
 // taaki purane records raw enum value ki jagah sahi naam dikhayein
-const LEAVE_TYPE_LABEL = { full_day:'Full Day', half_day:'Half Day', work_from_home:'Work From Home', extra_working:'Extra Working' };
+const LEAVE_TYPE_LABEL = { full_day:'Full Day', half_day:'Half Day', early_go:'Early Go', long_leave:'Long Leave', work_from_home:'Work From Home', extra_working:'Extra Working' };
 const LEAVE_STATUS_STYLE = {
   pending:  'background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)',
   approved: 'background:color-mix(in srgb,var(--success) 10%,transparent);color:var(--success)',

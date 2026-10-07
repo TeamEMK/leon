@@ -2147,7 +2147,7 @@ app.get('/api/leaves', requireAuth, async (req, res) => {
 app.post('/api/leaves', requireAuth, async (req, res) => {
   try {
     const { leave_type, from_date, to_date, reason } = req.body;
-    const valid = ['full_day','half_day']; // Work From Home hata diya (purane records phir bhi display hote hain)
+    const valid = ['full_day','half_day','early_go','long_leave']; // Work From Home hata diya (purane records phir bhi display hote hain)
     if (!valid.includes(leave_type)) return res.status(400).json({ error: 'Invalid leave type' });
     if (!from_date || !to_date) return res.status(400).json({ error: 'From and To date required' });
     if (from_date > to_date) return res.status(400).json({ error: 'From date must be on or before To date' });
