@@ -253,7 +253,7 @@ async function init() {
       if (fmsTab) fmsTab.style.display = 'none';
     }
     // Approvals admin / HOD / PC ko, aur designated leave-approver ko
-    if (ME.role === 'admin' || ME.role === 'hod' || ME.role === 'pc' || isLeaveApprover()) {
+    if (ME.role === 'admin' || ME.role === 'hod' || ME.role === 'pc' || canApproveAnyLeave()) {
       document.getElementById('nav-approvals').style.display = 'flex';
     }
     // Records tab temporarily disabled
@@ -619,6 +619,11 @@ function isHR() { return !!(ME && (ME.department || '').trim().toLowerCase() ===
 // flag hai (Users page se admin set karta hai), taaki sirf ek khaas banda ho.
 function isLeaveApprover() { return !!(ME && (ME.is_leave_approver === true || ME.is_leave_approver === 't' || Number(ME.is_leave_approver) === 1)); }
 
+// Global flag wala to approver hai hi; par kisi specific applicant ka
+// override bhi ho sakta hai (e.g. Seema -> Amit) — /api/me se aata hai
+// (canApproveAnyLeave), kyunki wo check sirf server-side hi lagaya ja sakta hai.
+function canApproveAnyLeave() { return !!(ME && ME.canApproveAnyLeave); }
+
 // Office / Factory badge — leave list me dikhta hai taaki HR ko pata chale banda kis segment ka hai
 function staffTypeBadge(st) {
   return st === 'factory'
@@ -629,7 +634,7 @@ function staffTypeBadge(st) {
 async function loadLeaveBadge() {
   const badge = document.getElementById('leaveBadge');
   if (!badge || !ME) return;
-  if (!isLeaveApprover()) { badge.style.display='none'; return; }
+  if (!canApproveAnyLeave()) { badge.style.display='none'; return; }
   const rows = await api(withSeg('/api/leaves'));
   if (!Array.isArray(rows)) return;
   const pending = rows.filter(l => l.status === 'pending' && String(l.user_id) !== String(ME.id)).length;
@@ -3092,11 +3097,29 @@ async function saveNewDepartment() {
   showToast('Department added!');
 }
 
+// Leave Approver Override dropdown ke options — allUsersData (Users page load
+// par already fetch ho chuki) se bharta hai, excludeId wale banda ko chhodkar
+// (koi khud ka override khud nahi ban sakta).
+function _populateLeaveApproverSelect(excludeId, selectedId) {
+  const sel = document.getElementById('uLeaveApproverId');
+  sel.innerHTML = '<option value="">— Default (use the global approver above) —</option>';
+  allUsersData
+    .filter(u => String(u.id) !== String(excludeId))
+    .sort((a,b) => (a.name||'').localeCompare(b.name||''))
+    .forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id; opt.textContent = u.name;
+      sel.appendChild(opt);
+    });
+  sel.value = selectedId ? String(selectedId) : '';
+}
+
 function openAddUser() {
   document.getElementById('userModalTitle').textContent='Add User';
   ['editUserId','uName','uEmail','uNotifEmail','uPhone','uPassword'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('uRole').value='user';
   document.getElementById('uIsLeaveApprover').checked=false;
+  _populateLeaveApproverSelect('', '');
   setUserViewOnly(false); // naya user by default full access
   document.getElementById('pwdOptional').style.display='none';
   document.getElementById('bulkUserSection').style.display=''; // CSV upload sirf yahan
@@ -3130,6 +3153,7 @@ function openEditUser(id) {
   document.getElementById('uPassword').value='';
   document.getElementById('uRole').value=u.role||'user';
   document.getElementById('uIsLeaveApprover').checked = (u.is_leave_approver === true || u.is_leave_approver === 't' || Number(u.is_leave_approver) === 1);
+  _populateLeaveApproverSelect(u.id, u.leave_approver_id);
   document.getElementById('pwdOptional').style.display='inline';
   document.getElementById('bulkUserSection').style.display='none'; // edit me bulk add ka matlab nahi
   document.getElementById('userErr').style.display='none';
@@ -3202,6 +3226,7 @@ async function saveUser() {
   const week_off=_getWeekOff();
   const extra_off=_getExtraOff();
   const is_leave_approver=document.getElementById('uIsLeaveApprover').checked?1:0;
+  const leave_approver_id=document.getElementById('uLeaveApproverId').value||null;
   if (!name||!email) { err.textContent='Name and email required'; err.style.display='block'; return; }
   if (!id&&!password) { err.textContent='Password required for new user'; err.style.display='block'; return; }
   if (view_only && String(id) === String(ME.id)) {
@@ -3215,7 +3240,7 @@ async function saveUser() {
   // karke save karne par uska staff_type 'office' set ho jayega. Yahan koi
   // farak nahi padta kyunki feature hata diya gaya hai aur sabhi users
   // 'office' hi hain — par feature wapas laao to ye pehle theek karna.
-  const body={name,email,notification_email,role,view_only,phone,department,week_off,extra_off,is_leave_approver};
+  const body={name,email,notification_email,role,view_only,phone,department,week_off,extra_off,is_leave_approver,leave_approver_id};
   if (password) body.password=password;
   const r = id ? await api(`/api/users/${id}`,'PUT',body) : await api('/api/users','POST',body);
   if (r.error) { err.textContent=r.error; err.style.display='block'; return; }
@@ -3349,7 +3374,7 @@ async function loadApprovals() {
   // (task/transfer approvals admin/hod/pc ke paas hain, leave approver ke nahi),
   // isliye wo bhi skip.
   const leaveOff = isPageDisabled('leaves');
-  if (isLeaveApprover() && ME.role !== 'admin' && ME.role !== 'hod' && ME.role !== 'pc' && !leaveOff) {
+  if (canApproveAnyLeave() && ME.role !== 'admin' && ME.role !== 'hod' && ME.role !== 'pc' && !leaveOff) {
     document.getElementById('apprTabTask').style.display = 'none';
     document.getElementById('apprTabLeave').style.display = 'block';
     switchApprovalTab('leave', document.getElementById('apprTabLeave'));
@@ -3361,7 +3386,7 @@ async function loadApprovals() {
   }
   // Leave approve SIRF designated approver kar sakta hai — admin ke liye
   // bhi koi exception nahi
-  if (isLeaveApprover() && !leaveOff) {
+  if (canApproveAnyLeave() && !leaveOff) {
     document.getElementById('apprTabLeave').style.display = 'block';
   }
 

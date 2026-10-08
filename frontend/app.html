@@ -1366,15 +1366,25 @@
         </div>
       </div>
     </div>
-    <!-- Leave approver — sirf ye check kiye hue users (+ Admin) leave requests
+    <!-- Leave approver — sirf ye check kiye hue users leave requests
          approve/reject kar sakte hain. Role/department se hatkar dedicated
-         flag, taaki ek khaas banda hi ye kaam kare, koi aur nahi. -->
+         flag, taaki ek khaas banda hi ye kaam kare, koi aur nahi (admin ke
+         liye bhi koi exception nahi). -->
     <div class="form-group">
       <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:var(--foreground);cursor:pointer">
         <input type="checkbox" id="uIsLeaveApprover" style="accent-color:var(--primary);width:16px;height:16px"/>
         Can approve leave requests
       </label>
-      <div style="font-size:11px;color:var(--muted-foreground);margin-top:4px">Only users with this checked (plus Admin) will see and act on the Leave Requests approval queue.</div>
+      <div style="font-size:11px;color:var(--muted-foreground);margin-top:4px">Only users with this checked will see and act on the Leave Requests approval queue.</div>
+    </div>
+    <!-- Specific override — ye applicant ki leave request SIRF niche chuna
+         hua banda approve/reject kar sakega (global flag wala bhi nahi).
+         Jab designated approver khud leave apply kare (apni leave khud
+         approve nahi kar sakta), tabhi iski zaroorat padti hai. -->
+    <div class="form-group">
+      <label>Leave Approver Override <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(optional)</span></label>
+      <select id="uLeaveApproverId"><option value="">— Default (use the global approver above) —</option></select>
+      <div style="font-size:11px;color:var(--muted-foreground);margin-top:4px">If set, ONLY this person can approve/reject THIS user's leave requests — e.g. set this to "Amit" on Seema's profile so Amit alone approves Seema's leave.</div>
     </div>
     <!-- Extra Off Section -->
     <div class="form-group">

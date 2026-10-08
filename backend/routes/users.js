@@ -33,47 +33,54 @@ module.exports = function registerUsersRoutes(app, ctx) {
       const seg = segmentFilter(req, '');
       const params = seg.param ? [seg.param] : [];
       const [rows] = await db.query(
-        `SELECT id,name,email,notification_email,role,view_only,phone,department,week_off,extra_off,staff_type,is_leave_approver FROM users WHERE 1=1${seg.clause} ORDER BY role DESC,name ASC`, params);
+        `SELECT id,name,email,notification_email,role,view_only,phone,department,week_off,extra_off,staff_type,is_leave_approver,leave_approver_id FROM users WHERE 1=1${seg.clause} ORDER BY role DESC,name ASC`, params);
       res.json(rows);
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
   });
 
   app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { name, email, notification_email, password, role, view_only, phone, department, week_off, extra_off, staff_type, is_leave_approver } = req.body;
+      const { name, email, notification_email, password, role, view_only, phone, department, week_off, extra_off, staff_type, is_leave_approver, leave_approver_id } = req.body;
       if (!name || !email || !password) return res.status(400).json({ error: 'All fields required' });
       const roleNorm = normalizeRole(role);
       if (!roleNorm) return res.status(400).json({ error: `Invalid role "${role}" — allowed: ${ROLES.join(', ')}` });
       const staffType = staff_type === 'factory' ? 'factory' : 'office';
       const viewOnly = (view_only === 1 || view_only === true || view_only === '1') ? 1 : 0;
       const leaveApprover = (is_leave_approver === 1 || is_leave_approver === true || is_leave_approver === '1');
+      // Specific override — "is applicant ki leave sirf ye banda approve kare".
+      // Khaali/0/'' sab -> null (purana default: global flag wala approve kare).
+      const leaveApproverId = leave_approver_id ? parseInt(leave_approver_id) : null;
       // Duplicate check bhi case-insensitive, warna a@x.com aur A@x.com dono ban
       // jaate hain aur login me se ek hi milta hai.
       const [ex] = await db.query('SELECT id FROM users WHERE LOWER(email)=LOWER(?)', [email]);
       if (ex[0]) return res.status(400).json({ error: 'Email already exists' });
-      await db.query('INSERT INTO users (name,email,notification_email,password,role,view_only,phone,department,week_off,extra_off,staff_type,is_leave_approver) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-        [name, email, notification_email||'', bcrypt.hashSync(password,10), roleNorm, viewOnly, phone||null, department||'', week_off||'', extra_off||'', staffType, leaveApprover]);
+      await db.query('INSERT INTO users (name,email,notification_email,password,role,view_only,phone,department,week_off,extra_off,staff_type,is_leave_approver,leave_approver_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [name, email, notification_email||'', bcrypt.hashSync(password,10), roleNorm, viewOnly, phone||null, department||'', week_off||'', extra_off||'', staffType, leaveApprover, leaveApproverId]);
       res.json({ success: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
   });
 
   app.put('/api/users/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { name, email, notification_email, role, view_only, password, phone, department, week_off, extra_off, staff_type, is_leave_approver } = req.body;
+      const { name, email, notification_email, role, view_only, password, phone, department, week_off, extra_off, staff_type, is_leave_approver, leave_approver_id } = req.body;
       const roleNorm = normalizeRole(role);
       if (!roleNorm) return res.status(400).json({ error: `Invalid role "${role}" — allowed: ${ROLES.join(', ')}` });
       const staffType = staff_type === 'factory' ? 'factory' : 'office';
       const viewOnly = (view_only === 1 || view_only === true || view_only === '1') ? 1 : 0;
       const leaveApprover = (is_leave_approver === 1 || is_leave_approver === true || is_leave_approver === '1');
+      let leaveApproverId = leave_approver_id ? parseInt(leave_approver_id) : null;
+      // Khud ko apna hi override approver nahi bana sakte — bekaar/confusing,
+      // self-approval already alag se blocked hai leave approve route me.
+      if (leaveApproverId && String(leaveApproverId) === String(req.params.id)) leaveApproverId = null;
       // Khud ko view-only banane par admin phir se kuch badal nahi paayega —
       // apni hi setting hatana bhi ek write hai. Isliye self par rok.
       if (viewOnly && String(req.params.id) === String(req.session.userId)) {
         return res.status(400).json({ error: 'You cannot set yourself to view-only — you would not be able to change it back.' });
       }
-      if (password) await db.query('UPDATE users SET name=?,email=?,notification_email=?,role=?,view_only=?,password=?,phone=?,department=?,week_off=?,extra_off=?,staff_type=?,is_leave_approver=?,session_version=session_version+1 WHERE id=?',
-        [name,email,notification_email||'',roleNorm,viewOnly,bcrypt.hashSync(password,10),phone||null,department||'',week_off||'',extra_off||'',staffType,leaveApprover,req.params.id]);
-      else await db.query('UPDATE users SET name=?,email=?,notification_email=?,role=?,view_only=?,phone=?,department=?,week_off=?,extra_off=?,staff_type=?,is_leave_approver=? WHERE id=?',
-        [name,email,notification_email||'',roleNorm,viewOnly,phone||null,department||'',week_off||'',extra_off||'',staffType,leaveApprover,req.params.id]);
+      if (password) await db.query('UPDATE users SET name=?,email=?,notification_email=?,role=?,view_only=?,password=?,phone=?,department=?,week_off=?,extra_off=?,staff_type=?,is_leave_approver=?,leave_approver_id=?,session_version=session_version+1 WHERE id=?',
+        [name,email,notification_email||'',roleNorm,viewOnly,bcrypt.hashSync(password,10),phone||null,department||'',week_off||'',extra_off||'',staffType,leaveApprover,leaveApproverId,req.params.id]);
+      else await db.query('UPDATE users SET name=?,email=?,notification_email=?,role=?,view_only=?,phone=?,department=?,week_off=?,extra_off=?,staff_type=?,is_leave_approver=?,leave_approver_id=? WHERE id=?',
+        [name,email,notification_email||'',roleNorm,viewOnly,phone||null,department||'',week_off||'',extra_off||'',staffType,leaveApprover,leaveApproverId,req.params.id]);
       // requireAuth session_version aur view_only ko kuch second cache karta hai.
       // Yahin dono badal sakte hain, isliye cache turant saaf — warna
       // force-logout ya view-only lagne me der lagti.

@@ -1468,10 +1468,20 @@ app.get('/api/me', requireAuth, async (req, res) => {
       .then(([f]) => f.length > 0)
       .catch(() => true);
 
-    const [[rows], isFmsDoer] = await Promise.all([userQ, fmsQ]);
+    // is_leave_approver to global approver hai hi; par koi specific applicant
+    // ka override bhi ho sakta hai (e.g. Seema -> Amit) — Amit khud globally
+    // flagged nahi hai, phir bhi use Leave Requests tab dikhna chahiye taaki
+    // wo Seema ki leave approve kar sake. Dono me se koi bhi true ho to tab dikhe.
+    const overrideQ = db.query('SELECT 1 FROM users WHERE leave_approver_id=? LIMIT 1', [uid])
+      .then(([o]) => o.length > 0)
+      .catch(() => false);
+
+    const [[rows], isFmsDoer, isOverrideApprover] = await Promise.all([userQ, fmsQ, overrideQ]);
     if (!rows[0]) return res.status(404).json({ error: 'User not found' });
     rows[0].extra_off = rows[0].extra_off || '';
     rows[0].isFmsDoer = isFmsDoer;
+    const isGlobalApprover = rows[0].is_leave_approver === true || rows[0].is_leave_approver === 't' || Number(rows[0].is_leave_approver) === 1;
+    rows[0].canApproveAnyLeave = !!(isGlobalApprover || isOverrideApprover);
     res.json(rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
 });
@@ -2115,20 +2125,35 @@ async function _isLeaveApprover(uid) {
   } catch (_) { return false; }
 }
 
-// List — user apni, designated leave-approver sabki (admin bhi nahi —
-// client ne explicitly maanga ki sirf flag wala banda, koi exception nahi)
+// Ek khaas applicant (e.g. Seema) ki leave ko sirf ek khaas banda (e.g. Amit)
+// approve kar sake — users.leave_approver_id. Set hai to EXCLUSIVE routing:
+// sirf wahi id approve kar sakti hai, global is_leave_approver wala bhi nahi.
+// NULL hai to purana default: global flag wala approve kare.
+async function _applicantApproverOverride(applicantUid) {
+  try {
+    const [r] = await db.query('SELECT leave_approver_id FROM users WHERE id=?', [applicantUid]);
+    return (r[0] && r[0].leave_approver_id) ? Number(r[0].leave_approver_id) : null;
+  } catch (_) { return null; }
+}
+
+async function _canApproveLeave(approverUid, applicantUid) {
+  const override = await _applicantApproverOverride(applicantUid);
+  if (override) return Number(override) === Number(approverUid);
+  return await _isLeaveApprover(approverUid);
+}
+
+// List — user apni, designated leave-approver sabki JINKA override nahi hai
+// ya jiska override khud wahi hai, aur jiska khud ke liye override set hai
+// wo apne override-wale applicant ki bhi (admin bhi nahi — client ne
+// explicitly maanga ki sirf flag/override wala banda, koi exception nahi)
 app.get('/api/leaves', requireAuth, async (req, res) => {
   try {
     const uid = req.session.userId;
-    let where = '', params = [];
-    if (await _isLeaveApprover(uid)) {
-      // sab dikhega
-    } else {
-      where = 'WHERE lr.user_id=?'; params = [uid];
-    }
-    // Office/Factory segment — admin/pc ke liye hi relevant (unhi ka where khali hota hai)
+    let where = `WHERE (lr.user_id=? OR u.leave_approver_id=? OR (u.leave_approver_id IS NULL AND EXISTS (SELECT 1 FROM users me WHERE me.id=? AND me.is_leave_approver=true)))`;
+    let params = [uid, uid, uid];
+    // Office/Factory segment — admin/pc ke liye hi relevant
     const segL = segmentFilter(req, 'u');
-    if (segL.param) { where += (where ? ' AND' : 'WHERE') + ' u.staff_type=?'; params.push(segL.param); }
+    if (segL.param) { where += ' AND u.staff_type=?'; params.push(segL.param); }
     const [rows] = await db.query(
       `SELECT lr.id, lr.user_id, u.name AS "userName", u.department, u.staff_type, lr.leave_type,
               TO_CHAR(lr.from_date,'YYYY-MM-DD') AS from_date,
@@ -2179,7 +2204,7 @@ app.put('/api/leaves/:id', requireAuth, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: 'Leave request not found' });
     const lv = rows[0];
 
-    const allowed = await _isLeaveApprover(uid);
+    const allowed = await _canApproveLeave(uid, lv.user_id);
     if (!allowed) return res.status(403).json({ error: 'Not allowed' });
     if (lv.status !== 'pending') return res.status(400).json({ error: 'This request has already been decided' });
     if (lv.user_id === uid) return res.status(400).json({ error: 'You cannot approve your own leave' });
@@ -2247,11 +2272,17 @@ app.get('/api/leaves/today', requireAuth, async (req, res) => {
 });
 
 // Kaun leave approve karta hai — Apply Leave form par "Your Approver: <naam>"
-// dikhane ke liye. SAB logged-in users dekh sakte hain (poori users list
-// nahi, sirf approver ke naam — taaki har employee ke Apply Leave khulte
+// dikhane ke liye. Khud ka override set hai (e.g. Seema -> Amit) to sirf wahi
+// naam; warna global flag wale sab (SAB logged-in users dekh sakte hain —
+// poori users list nahi, sirf approver ke naam, taaki Apply Leave khulte
 // waqt org ka poora roster fetch na ho).
 app.get('/api/leaves/approver', requireAuth, async (req, res) => {
   try {
+    const override = await _applicantApproverOverride(req.session.userId);
+    if (override) {
+      const [r] = await db.query('SELECT name FROM users WHERE id=?', [override]);
+      return res.json({ names: r[0] ? [r[0].name] : [] });
+    }
     const [rows] = await db.query('SELECT name FROM users WHERE is_leave_approver=? ORDER BY name ASC', [true]);
     res.json({ names: rows.map(r => r.name) });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
