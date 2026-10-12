@@ -664,16 +664,28 @@ async function loadLeaveToday() {
 async function loadForms() {
   const box = document.getElementById('formsContent');
   box.innerHTML = '<div style="padding:20px;color:var(--muted-foreground);font-size:13px;text-align:center">Loading…</div>';
-  const rows = await api('/api/forms');
+  const isAdmin = ME.role === 'admin';
+  const [rows, myInfo] = await Promise.all([api('/api/forms'), api('/api/employee-info/me')]);
   if (rows.error) { box.innerHTML = `<div style="padding:20px;color:var(--destructive)">${escapeHtml(rows.error)}</div>`; return; }
   _forms = rows || [];
-  if (!_forms.length) {
-    box.innerHTML = `<div class="empty" style="background:var(--card);border-radius:12px;border:1px solid var(--border);">No forms added yet.${ME.role==='admin' ? ' Click "+ Add New Form" to get started.' : ''}</div>`;
-    return;
-  }
-  const isAdmin = ME.role === 'admin';
-  box.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">` +
-    _forms.map(f => `
+
+  // Built-in Employee Personal Information Form card — har log ko dikhta
+  // hai (admin-added links se alag, in-app hi khulta hai, API se nahi aata).
+  const submitted = myInfo && !myInfo.error && myInfo.id;
+  const builtIn = `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:14px;font-weight:600;color:var(--foreground);word-break:break-word">📋 Employee Personal Information Form</div>
+        <div style="font-size:11px;color:var(--muted-foreground)">${submitted ? `✅ Submitted — last updated ${escapeHtml(myInfo.updated_at || myInfo.submitted_at || '')}` : 'Submit your personal details &amp; KYC documents'}</div>
+        <button class="btn btn-primary btn-sm" style="margin-top:auto" onclick="openEmpInfoForm()">${submitted ? 'View / Update' : 'Fill Form'}</button>
+      </div>` +
+    (isAdmin ? `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:14px;font-weight:600;color:var(--foreground);word-break:break-word">🗂️ Personal Info — Responses</div>
+        <div style="font-size:11px;color:var(--muted-foreground)">Admin only — view everyone's submitted details</div>
+        <button class="btn btn-outline btn-sm" style="margin-top:auto" onclick="openEmpInfoResponses()">View Responses</button>
+      </div>` : '');
+
+  const otherCards = _forms.map(f => `
       <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:10px">
         <div style="font-size:14px;font-weight:600;color:var(--foreground);word-break:break-word">📄 ${escapeHtml(f.name)}</div>
         <div style="display:flex;gap:6px;margin-top:auto">
@@ -681,8 +693,216 @@ async function loadForms() {
           ${isAdmin ? `<button class="action-btn edit" onclick="openEditForm(${f.id})" title="Edit">✏️</button>
           <button class="action-btn delete" onclick="deleteForm(${f.id})" title="Delete">🗑️</button>` : ''}
         </div>
-      </div>`).join('') +
-    `</div>`;
+      </div>`).join('');
+
+  box.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">${builtIn}${otherCards}</div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// EMPLOYEE PERSONAL INFORMATION FORM (built-in, Forms section)
+// ══════════════════════════════════════════════════════
+// Photos (Aadhaar front/back, cancelled cheque) base64 me state me rehte
+// hain jab tak Save na ho — compressImage() wahi proof-of-work photo wala
+// helper reuse karta hai. Pehle se saved photo ho to pre-load ho jaata hai,
+// taaki baaki fields edit karke Save karne par photo gum na ho.
+let _empInfoPhotos = { aadhaar_photo_front: null, aadhaar_photo_back: null, cancelled_cheque_photo: null };
+const _EI_BOX_ID = { aadhaar_photo_front: 'eiBoxFront', aadhaar_photo_back: 'eiBoxBack', cancelled_cheque_photo: 'eiBoxCheque' };
+
+function _setEmpPhotoBox(field, dataUrl) {
+  _empInfoPhotos[field] = dataUrl || null;
+  const box = document.getElementById(_EI_BOX_ID[field]);
+  if (!box) return;
+  box.innerHTML = dataUrl ? '✅ Uploaded — click to change' : '📷 Click to upload';
+  box.style.color = dataUrl ? 'var(--success)' : 'var(--muted-foreground)';
+  box.style.borderColor = dataUrl ? 'var(--success)' : 'var(--border)';
+}
+
+function _empPhotoInput() {
+  let el = document.getElementById('_empInfoPhotoInput');
+  if (!el) {
+    el = document.createElement('input');
+    el.type = 'file';
+    el.accept = 'image/*';
+    el.capture = 'environment';
+    el.id = '_empInfoPhotoInput';
+    el.style.display = 'none';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function pickEmpPhoto(field) {
+  const input = _empPhotoInput();
+  input.value = '';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showToast('Only image files can be uploaded', 'error'); return; }
+    showToast('⏳ Compressing photo…');
+    try {
+      const dataUrl = await compressImage(file);
+      _setEmpPhotoBox(field, dataUrl);
+    } catch (e) { showToast(e.message, 'error'); }
+  };
+  input.click();
+}
+
+async function openEmpInfoForm() {
+  document.getElementById('empInfoErr').style.display = 'none';
+  // Form reset
+  ['eiEmail','eiFullName','eiMobile','eiAltPhone','eiGender','eiDob','eiCurrAddr','eiPermAddr',
+   'eiBloodGroup','eiAboutMe','eiAadhaarNum','eiMedical','eiParentName','eiParentContact',
+   'eiSpouseName','eiSpouseContact','eiEmName','eiEmRelation','eiEmPrimary','eiEmAlternate',
+   'eiEmAddress','eiFriendName','eiFriendContact'].forEach(id => { document.getElementById(id).value = ''; });
+  _setEmpPhotoBox('aadhaar_photo_front', null);
+  _setEmpPhotoBox('aadhaar_photo_back', null);
+  _setEmpPhotoBox('cancelled_cheque_photo', null);
+  document.getElementById('eiEmail').value = ME.email || '';
+
+  document.getElementById('empInfoModal').classList.add('open');
+  const r = await api('/api/employee-info/me');
+  if (r && !r.error && r.id) {
+    document.getElementById('eiEmail').value = r.email || ME.email || '';
+    document.getElementById('eiFullName').value = r.full_name || '';
+    document.getElementById('eiMobile').value = r.mobile_number || '';
+    document.getElementById('eiAltPhone').value = r.alternate_phone || '';
+    document.getElementById('eiGender').value = r.gender || '';
+    document.getElementById('eiDob').value = r.dob || '';
+    document.getElementById('eiCurrAddr').value = r.current_address || '';
+    document.getElementById('eiPermAddr').value = r.permanent_address || '';
+    document.getElementById('eiBloodGroup').value = r.blood_group || '';
+    document.getElementById('eiAboutMe').value = r.about_me || '';
+    document.getElementById('eiAadhaarNum').value = r.aadhaar_number || '';
+    document.getElementById('eiMedical').value = r.medical_info || '';
+    document.getElementById('eiParentName').value = r.parent_name || '';
+    document.getElementById('eiParentContact').value = r.parent_contact || '';
+    document.getElementById('eiSpouseName').value = r.spouse_sibling_name || '';
+    document.getElementById('eiSpouseContact').value = r.spouse_sibling_contact || '';
+    document.getElementById('eiEmName').value = r.emergency_contact_name || '';
+    document.getElementById('eiEmRelation').value = r.emergency_contact_relation || '';
+    document.getElementById('eiEmPrimary').value = r.emergency_contact_primary || '';
+    document.getElementById('eiEmAlternate').value = r.emergency_contact_alternate || '';
+    document.getElementById('eiEmAddress').value = r.emergency_contact_address || '';
+    document.getElementById('eiFriendName').value = r.friend_name || '';
+    document.getElementById('eiFriendContact').value = r.friend_contact || '';
+    _setEmpPhotoBox('aadhaar_photo_front', r.aadhaar_photo_front || null);
+    _setEmpPhotoBox('aadhaar_photo_back', r.aadhaar_photo_back || null);
+    _setEmpPhotoBox('cancelled_cheque_photo', r.cancelled_cheque_photo || null);
+  }
+}
+
+async function saveEmpInfo() {
+  const err = document.getElementById('empInfoErr');
+  err.style.display = 'none';
+  const body = {
+    email: document.getElementById('eiEmail').value.trim(),
+    full_name: document.getElementById('eiFullName').value.trim(),
+    mobile_number: document.getElementById('eiMobile').value.trim(),
+    alternate_phone: document.getElementById('eiAltPhone').value.trim(),
+    gender: document.getElementById('eiGender').value,
+    dob: document.getElementById('eiDob').value,
+    current_address: document.getElementById('eiCurrAddr').value.trim(),
+    permanent_address: document.getElementById('eiPermAddr').value.trim(),
+    blood_group: document.getElementById('eiBloodGroup').value,
+    about_me: document.getElementById('eiAboutMe').value.trim(),
+    aadhaar_number: document.getElementById('eiAadhaarNum').value.trim(),
+    aadhaar_photo_front: _empInfoPhotos.aadhaar_photo_front,
+    aadhaar_photo_back: _empInfoPhotos.aadhaar_photo_back,
+    cancelled_cheque_photo: _empInfoPhotos.cancelled_cheque_photo,
+    medical_info: document.getElementById('eiMedical').value.trim(),
+    parent_name: document.getElementById('eiParentName').value.trim(),
+    parent_contact: document.getElementById('eiParentContact').value.trim(),
+    spouse_sibling_name: document.getElementById('eiSpouseName').value.trim(),
+    spouse_sibling_contact: document.getElementById('eiSpouseContact').value.trim(),
+    emergency_contact_name: document.getElementById('eiEmName').value.trim(),
+    emergency_contact_relation: document.getElementById('eiEmRelation').value.trim(),
+    emergency_contact_primary: document.getElementById('eiEmPrimary').value.trim(),
+    emergency_contact_alternate: document.getElementById('eiEmAlternate').value.trim(),
+    emergency_contact_address: document.getElementById('eiEmAddress').value.trim(),
+    friend_name: document.getElementById('eiFriendName').value.trim(),
+    friend_contact: document.getElementById('eiFriendContact').value.trim(),
+  };
+  const required = { full_name:'Full Name', mobile_number:'Mobile Number', gender:'Gender', dob:'Date of Birth',
+    current_address:'Current Address', permanent_address:'Permanent Address', blood_group:'Blood Group',
+    aadhaar_number:'Aadhaar Card Number', emergency_contact_name:"Emergency Contact Person's Full Name",
+    emergency_contact_relation:'Relationship with the Employee', emergency_contact_primary:'Primary Emergency Contact Number' };
+  for (const k in required) {
+    if (!body[k]) { err.textContent = `${required[k]} is required`; err.style.display = 'block'; return; }
+  }
+  const r = await api('/api/employee-info', 'POST', body);
+  if (r.error) { err.textContent = r.error; err.style.display = 'block'; return; }
+  closeModal('empInfoModal');
+  showToast('✅ Submitted! Thank you.');
+  loadForms();
+}
+
+// ── Admin: responses list + readonly detail ───────────────────────────
+let _empInfoRows = [];
+
+async function openEmpInfoResponses() {
+  document.getElementById('empInfoSearch').value = '';
+  document.getElementById('empInfoListBody').innerHTML = '<div style="padding:20px;color:var(--muted-foreground);font-size:13px;text-align:center">Loading…</div>';
+  document.getElementById('empInfoListModal').classList.add('open');
+  const rows = await api('/api/employee-info');
+  if (rows.error) { document.getElementById('empInfoListBody').innerHTML = `<div style="padding:20px;color:var(--destructive)">${escapeHtml(rows.error)}</div>`; return; }
+  _empInfoRows = rows || [];
+  renderEmpInfoList();
+}
+
+function renderEmpInfoList() {
+  const q = (document.getElementById('empInfoSearch').value || '').trim().toLowerCase();
+  const filtered = !q ? _empInfoRows : _empInfoRows.filter(r =>
+    (r.full_name||'').toLowerCase().includes(q) || (r.userName||'').toLowerCase().includes(q) ||
+    (r.email||'').toLowerCase().includes(q) || (r.mobile_number||'').toLowerCase().includes(q));
+  const body = document.getElementById('empInfoListBody');
+  if (!filtered.length) { body.innerHTML = `<div class="empty" style="background:var(--card);border-radius:12px;border:1px solid var(--border);">No responses ${q ? 'match your search' : 'yet'}.</div>`; return; }
+  body.innerHTML = `<div class="flat-tasks-table"><div style="overflow-x:auto"><table style="min-width:600px">
+      <thead><tr><th>Employee</th><th>Full Name</th><th>Mobile</th><th>Last Updated</th><th></th></tr></thead>
+      <tbody>${filtered.map(r => `
+        <tr>
+          <td>${escapeHtml(r.userName)}${r.department ? ` <span style="color:var(--muted-foreground);font-size:11px">(${escapeHtml(r.department)})</span>` : ''}</td>
+          <td>${escapeHtml(r.full_name||'')}</td>
+          <td>${escapeHtml(r.mobile_number||'')}</td>
+          <td>${escapeHtml(r.updated_at||r.submitted_at||'')}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="openEmpInfoDetail(${r.id})">View</button></td>
+        </tr>`).join('')}</tbody>
+    </table></div></div>`;
+}
+
+function _eiRow(label, value) {
+  return `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-size:11px;color:var(--muted-foreground);text-transform:uppercase;letter-spacing:.3px">${escapeHtml(label)}</div><div style="font-size:13px;color:var(--foreground);margin-top:2px;white-space:pre-wrap">${escapeHtml(value || '—')}</div></div>`;
+}
+function _eiPhotoRow(label, dataUrl) {
+  if (!dataUrl) return _eiRow(label, '');
+  return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted-foreground);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">${escapeHtml(label)}</div>
+      <a href="${dataUrl}" target="_blank" rel="noopener noreferrer"><img src="${dataUrl}" style="max-width:220px;max-height:160px;border-radius:8px;border:1px solid var(--border)"/></a>
+    </div>`;
+}
+
+async function openEmpInfoDetail(id) {
+  document.getElementById('empInfoDetailTitle').textContent = 'Loading…';
+  document.getElementById('empInfoDetailBody').innerHTML = '';
+  document.getElementById('empInfoDetailModal').classList.add('open');
+  const r = await api(`/api/employee-info/${id}`);
+  if (r.error) { document.getElementById('empInfoDetailBody').innerHTML = `<div style="color:var(--destructive)">${escapeHtml(r.error)}</div>`; return; }
+  document.getElementById('empInfoDetailTitle').textContent = `${r.full_name || r.userName} — Personal Information`;
+  document.getElementById('empInfoDetailBody').innerHTML =
+    _eiRow('Email Address', r.email) + _eiRow('Full Name', r.full_name) + _eiRow('Mobile Number', r.mobile_number) +
+    _eiRow('Alternate Phone Number', r.alternate_phone) + _eiRow('Gender', r.gender) + _eiRow('Date of Birth', r.dob) +
+    _eiRow('Current Address', r.current_address) + _eiRow('Permanent Address', r.permanent_address) +
+    _eiRow('Blood Group', r.blood_group) + _eiRow('About', r.about_me) +
+    _eiRow('Aadhaar Card Number', r.aadhaar_number) +
+    _eiPhotoRow('Aadhaar Card Photo — Front', r.aadhaar_photo_front) +
+    _eiPhotoRow('Aadhaar Card Photo — Back', r.aadhaar_photo_back) +
+    _eiPhotoRow('Cancelled Cheque Photo', r.cancelled_cheque_photo) +
+    _eiRow('Medical Conditions / Allergies / Other', r.medical_info) +
+    _eiRow("Father's/Mother's Name", r.parent_name) + _eiRow("Father's/Mother's Contact Number", r.parent_contact) +
+    _eiRow("Spouse's/Sibling's Name", r.spouse_sibling_name) + _eiRow("Spouse's/Sibling's Contact Number", r.spouse_sibling_contact) +
+    _eiRow("Emergency Contact Person's Full Name", r.emergency_contact_name) + _eiRow('Relationship with the Employee', r.emergency_contact_relation) +
+    _eiRow('Primary Emergency Contact Number', r.emergency_contact_primary) + _eiRow('Alternate Emergency Contact Number', r.emergency_contact_alternate) +
+    _eiRow("Emergency Contact Person's Address", r.emergency_contact_address) +
+    _eiRow("Friend's Name", r.friend_name) + _eiRow("Friend's Contact Number", r.friend_contact);
 }
 
 let _forms = [];
