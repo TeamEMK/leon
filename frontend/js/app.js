@@ -5768,7 +5768,9 @@ async function openEditFMS() {
     extraRows: (s.extraRows||[]).map(r=>({col_letter:r.col_letter||'', field_type:r.field_type||'text', label:r.row_label||r.label||r.col_letter||'', dropdown_options:r.dropdown_options||'', required: r.required==null?1:([0,1,2].includes(Number(r.required))?Number(r.required):(r.required?1:0))})),
     showCols: s.show_cols_parsed || [],
     delayReasonCol: s.delay_reason_col||'',
-    doerNameCol: s.doer_name_col||''
+    doerNameCol: s.doer_name_col||'',
+    lostCol: s.lost_col||'',
+    lostValue: s.lost_value||''
   }));
 
   fmsDeleteMode = false;
@@ -5998,7 +6000,7 @@ async function proceedToStepsConfig() {
   const container = document.getElementById('fmsStepsContainer');
   container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted-foreground)">⏳ Loading headers...</div>';
   for (let i=0; i<fmsData.totalSteps; i++) {
-    fmsSteps.push({ stepName:`Step ${i+1}`, doers:[], planCol:'', actualCol:'', extraInput:'no', extraCol:'', extraRows:[], showCols:[], delayReasonCol:'', doerNameCol:'' }); // extraRows items: {col_letter, field_type, label}
+    fmsSteps.push({ stepName:`Step ${i+1}`, doers:[], planCol:'', actualCol:'', extraInput:'no', extraCol:'', extraRows:[], showCols:[], delayReasonCol:'', doerNameCol:'', lostCol:'', lostValue:'' }); // extraRows items: {col_letter, field_type, label}
   }
 
   fmsDeleteMode = false;
@@ -6202,6 +6204,29 @@ function buildStepBoxHTML(idx) {
       <input type="text" value="${s.delayReasonCol||''}" placeholder="e.g. K"
         oninput="fmsSteps[${idx}].delayReasonCol=this.value"
         style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none"/>`}
+    </div>
+
+    <!-- Lost Lead Column — row isme match kare to FMS ke KISI BHI step ki
+         pending list me nahi dikhegi (lead dead ho chuki). -->
+    <div class="form-group" style="margin:10px 0 0">
+      <label>Lost Lead Column <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(optional — a lead marked here stops appearing as pending in every step, not just this one)</span></label>
+      <div class="form-row" style="margin:0">
+        <div class="form-group" style="margin:0">
+          ${headers.length ? `
+          <select class="header-select" onchange="fmsSteps[${idx}].lostCol=this.value">
+            <option value="">-- None (this step has no Lost status) --</option>
+            ${headers.map(h=>`<option value="${h.col}" ${s.lostCol===h.col?'selected':''}>${h.name} (COL ${h.col})</option>`).join('')}
+          </select>` : `
+          <input type="text" value="${s.lostCol||''}" placeholder="e.g. M"
+            oninput="fmsSteps[${idx}].lostCol=this.value"
+            style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none"/>`}
+        </div>
+        <div class="form-group" style="margin:0">
+          <input type="text" value="${escapeHtml(s.lostValue||'')}" placeholder="Value that means Lost, e.g. Lost"
+            oninput="fmsSteps[${idx}].lostValue=this.value"
+            style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none"/>
+        </div>
+      </div>
     </div>
 
     <div class="form-group" style="margin:10px 0 0">
@@ -6549,6 +6574,7 @@ async function autoFillFMSSteps() {
       extraInput: s.extraInput || 'no', extraCol: '',
       extraRows: s.extraRows || [], showCols: [],
       delayReasonCol: '', doerNameCol: s.doerNameCol || '',
+      lostCol: '', lostValue: '',
     }));
     const box = document.getElementById('fmsStepsContainer');
     box.innerHTML = '';
@@ -6578,7 +6604,7 @@ async function autoFillFMSSteps() {
 
 function addFMSStep() {
   const idx = fmsSteps.length;
-  fmsSteps.push({stepName:`Step ${idx+1}`, doers:[], planCol:'', actualCol:'', extraInput:'no', extraCol:'', extraRows:[], showCols:[], delayReasonCol:'', doerNameCol:''});
+  fmsSteps.push({stepName:`Step ${idx+1}`, doers:[], planCol:'', actualCol:'', extraInput:'no', extraCol:'', extraRows:[], showCols:[], delayReasonCol:'', doerNameCol:'', lostCol:'', lostValue:''});
   appendFMSStepBox(idx, getActiveFMSContainer());
   updateEditStepNav();
 }

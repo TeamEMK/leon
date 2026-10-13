@@ -2979,8 +2979,8 @@ app.post('/api/fms', requireAuth, requireAdmin, async (req, res) => {
       const s = steps[i];
       const nm = _capStepNames(s, headers);
       const [sr] = await conn.query(
-        `INSERT INTO fms_steps (fms_id,step_order,step_name,plan_col,plan_col_name,actual_col,actual_col_name,extra_input,extra_col,show_cols,show_col_names,delay_reason_col,delay_reason_col_name,doer_name_col,doer_name_col_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [fmsId,i+1,s.stepName,s.planCol||'',nm.planName,s.actualCol||'',nm.actualName,s.extraInput||'no',s.extraCol||'',JSON.stringify(s.showCols||[]),nm.showNames,s.delayReasonCol||'',nm.delayReasonName,s.doerNameCol||'',nm.doerNameName]
+        `INSERT INTO fms_steps (fms_id,step_order,step_name,plan_col,plan_col_name,actual_col,actual_col_name,extra_input,extra_col,show_cols,show_col_names,delay_reason_col,delay_reason_col_name,doer_name_col,doer_name_col_name,lost_col,lost_col_name,lost_value) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [fmsId,i+1,s.stepName,s.planCol||'',nm.planName,s.actualCol||'',nm.actualName,s.extraInput||'no',s.extraCol||'',JSON.stringify(s.showCols||[]),nm.showNames,s.delayReasonCol||'',nm.delayReasonName,s.doerNameCol||'',nm.doerNameName,s.lostCol||'',nm.lostName,(s.lostValue||'').trim()||null]
       );
       const stepId = sr.insertId;
       if (s.doers?.length) for (const uid of s.doers) await conn.query('INSERT INTO fms_step_doers (step_id,user_id) VALUES (?,?)', [stepId, uid]);
@@ -3011,8 +3011,8 @@ app.put('/api/fms/:id', requireAuth, requireAdmin, async (req, res) => {
       const s = steps[i];
       const nm = _capStepNames(s, headers);
       const [sr] = await conn.query(
-        `INSERT INTO fms_steps (fms_id,step_order,step_name,plan_col,plan_col_name,actual_col,actual_col_name,extra_input,extra_col,show_cols,show_col_names,delay_reason_col,delay_reason_col_name,doer_name_col,doer_name_col_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [req.params.id,i+1,s.stepName,s.planCol||'',nm.planName,s.actualCol||'',nm.actualName,s.extraInput||'no',s.extraCol||'',JSON.stringify(s.showCols||[]),nm.showNames,s.delayReasonCol||'',nm.delayReasonName,s.doerNameCol||'',nm.doerNameName]
+        `INSERT INTO fms_steps (fms_id,step_order,step_name,plan_col,plan_col_name,actual_col,actual_col_name,extra_input,extra_col,show_cols,show_col_names,delay_reason_col,delay_reason_col_name,doer_name_col,doer_name_col_name,lost_col,lost_col_name,lost_value) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [req.params.id,i+1,s.stepName,s.planCol||'',nm.planName,s.actualCol||'',nm.actualName,s.extraInput||'no',s.extraCol||'',JSON.stringify(s.showCols||[]),nm.showNames,s.delayReasonCol||'',nm.delayReasonName,s.doerNameCol||'',nm.doerNameName,s.lostCol||'',nm.lostName,(s.lostValue||'').trim()||null]
       );
       const stepId = sr.insertId;
       if (s.doers?.length) for (const uid of s.doers) await conn.query('INSERT INTO fms_step_doers (step_id,user_id) VALUES (?,?)', [stepId, uid]);
@@ -3359,10 +3359,24 @@ app.get('/api/fms-tasks/:fmsId/steps/:stepId/rows', requireAuth, async (req, res
     let showCols = [];
     try { showCols = JSON.parse(step.show_cols||'[]'); } catch(e) {}
 
+    // Lost lead — FMS ke KISI BHI step par "Lost Column" set ho sakta hai
+    // (jahan staff ek value likh kar lead ko dead mark karte hain). Jis row
+    // me wo column apni configured "lost value" se match kare, wo row AAGE
+    // kisi bhi step ki pending list me nahi dikhni chahiye — lead wahin
+    // ruk gayi, use kisi aur step me "pending" dikhana galat hai.
+    const [allStepsForLost] = await db.query('SELECT * FROM fms_steps WHERE fms_id=?', [req.params.fmsId]);
+    if (headers.length) for (const st of allStepsForLost) _healStepCols(st, headers);
+    const lostChecks = allStepsForLost
+      .filter(st => String(st.lost_col || '').trim())
+      .map(st => ({ idx: colToIdx(st.lost_col), value: String(st.lost_value || 'Lost').trim().toLowerCase() }))
+      .filter(c => c.idx >= 0);
+    const isRowLost = row => lostChecks.some(c => String(row[c.idx] || '').trim().toLowerCase() === c.value);
+
     const dataRows = allRows.slice(headerRowIdx + 1);
 
     const matchedRows = [];
     dataRows.forEach((row, i) => {
+      if (isRowLost(row)) return;
       const planVal = planIdx >= 0 ? (row[planIdx]||'').trim() : '';
       const actualVal = actualIdx >= 0 ? (row[actualIdx]||'').trim() : '';
       if (planVal && !actualVal) {

@@ -105,6 +105,7 @@ function _healStepCols(step, headers) {
   set('actual_col_name', 'actual_col');
   set('delay_reason_col_name', 'delay_reason_col');
   set('doer_name_col_name', 'doer_name_col');
+  set('lost_col_name', 'lost_col');
   if (step.show_col_names) {
     let names = []; try { names = JSON.parse(step.show_col_names); } catch (e) {}
     let orig = []; try { orig = JSON.parse(step.show_cols || '[]'); } catch (e) {}
@@ -129,6 +130,7 @@ function _capStepNames(s, headers) {
     showNames: showNames.length ? JSON.stringify(showNames) : null,
     delayReasonName: nameOf(s.delayReasonCol),
     doerNameName: nameOf(s.doerNameCol),
+    lostName: nameOf(s.lostCol),
   };
 }
 
