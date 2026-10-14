@@ -666,7 +666,7 @@ async function loadDailyLeave() {
   document.getElementById('dailyLeaveAddBtn').style.display = isAdmin ? '' : 'none';
   const rows = await api('/api/daily-leave');
   if (!Array.isArray(rows)) { list.innerHTML = ''; return; }
-  if (!rows.length) { list.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground)">✅ Aaj sab available hain — koi leave update nahi.</div>'; return; }
+  if (!rows.length) { list.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground)">✅ Everyone is available today — no leave updates.</div>'; return; }
   list.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px">' + rows.map(r => `
     <div style="display:flex;align-items:center;gap:8px;background:var(--muted);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:12px">
       <div><strong>${escapeHtml(r.userName)}</strong>${r.department ? ` <span style="opacity:.7">(${escapeHtml(r.department)})</span>` : ''}
