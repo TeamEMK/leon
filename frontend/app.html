@@ -151,6 +151,15 @@
     <!-- Aaj kaun leave par hai — sab employees ko dikhta hai. Leave approve
          hote hi yahan apne aap aa jaata hai (aur date nikalte hi hat jaata hai). -->
     <div id="dashLeaveTodayBanner" style="display:none;background:color-mix(in srgb,var(--warning) 12%,transparent);border:1px solid color-mix(in srgb,var(--warning) 28%,transparent);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:color-mix(in srgb,var(--warning) 80%,var(--foreground));display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>
+    <!-- Daily Leave Update — Admin roz yahan employees ka leave status (sick
+         leave samet) daalta hai; poori team ko dikhta hai. -->
+    <div id="dailyLeaveCard" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow-xs)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-size:14px;font-weight:600;color:var(--foreground)">📢 Daily Leave Update <span style="font-weight:400;font-size:12px;color:var(--muted-foreground)">— aaj ka status</span></div>
+        <button class="btn btn-primary btn-sm" id="dailyLeaveAddBtn" style="display:none" onclick="openDailyLeave()">+ Update</button>
+      </div>
+      <div id="dailyLeaveList" style="margin-top:10px"></div>
+    </div>
     <div class="overview-cards">
       <div class="ov-card total clickable"     id="card-all"       onclick="selectDashCard('all')"       title="Show all tasks below"><div class="label">Total Tasks</div><div class="number" id="dTotal">—</div></div>
       <!-- "Upcoming (this month)" card yahan se hata diya gaya. Upcoming tasks
@@ -1135,6 +1144,36 @@
     <div class="modal-footer" style="justify-content:space-between">
       <button class="btn btn-outline" onclick="closeModal('formAddModal')">Cancel</button>
       <button class="btn btn-primary" id="formSaveBtn" onclick="saveForm()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DAILY LEAVE UPDATE — Admin entry modal
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="dailyLeaveModal">
+  <div class="modal" style="max-width:480px">
+    <h3>📢 Daily Leave Update</h3>
+    <div class="alert error" id="dailyLeaveErr"></div>
+    <div class="form-group"><label>Employee</label><select id="dlUser"></select></div>
+    <div class="form-row">
+      <div class="form-group"><label>Status</label>
+        <select id="dlType">
+          <option value="sick_leave">Sick Leave</option>
+          <option value="full_day">Full Day Leave</option>
+          <option value="half_day">Half Day</option>
+          <option value="early_go">Early Go</option>
+          <option value="long_leave">Long Leave</option>
+          <option value="work_from_home">Work From Home</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Date</label><input type="date" id="dlDate"/></div>
+    </div>
+    <div class="form-group"><label>Note <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(optional)</span></label><input type="text" id="dlNote" maxlength="300" placeholder="e.g. Fever, back by Thursday"/></div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-outline" onclick="closeModal('dailyLeaveModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDailyLeave()">Save</button>
     </div>
   </div>
 </div>

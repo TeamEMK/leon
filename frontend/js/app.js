@@ -655,6 +655,59 @@ async function loadLeaveToday() {
   el.style.display = 'flex';
 }
 
+// ── Daily Leave Update (dashboard) ────────────────────
+// Admin roz employees ka leave status daalta hai (sick leave samet); sabko dikhta hai.
+const DAILY_LEAVE_LABEL = { sick_leave:'🤒 Sick Leave', full_day:'Full Day Leave', half_day:'Half Day', early_go:'Early Go', long_leave:'Long Leave', work_from_home:'🏠 Work From Home', other:'Other' };
+
+async function loadDailyLeave() {
+  const list = document.getElementById('dailyLeaveList');
+  if (!list) return;
+  const isAdmin = ME.role === 'admin';
+  document.getElementById('dailyLeaveAddBtn').style.display = isAdmin ? '' : 'none';
+  const rows = await api('/api/daily-leave');
+  if (!Array.isArray(rows)) { list.innerHTML = ''; return; }
+  if (!rows.length) { list.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground)">✅ Aaj sab available hain — koi leave update nahi.</div>'; return; }
+  list.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px">' + rows.map(r => `
+    <div style="display:flex;align-items:center;gap:8px;background:var(--muted);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:12px">
+      <div><strong>${escapeHtml(r.userName)}</strong>${r.department ? ` <span style="opacity:.7">(${escapeHtml(r.department)})</span>` : ''}
+        — ${escapeHtml(DAILY_LEAVE_LABEL[r.leave_type] || r.leave_type)}${r.note ? `<div style="font-size:11px;color:var(--muted-foreground)">${escapeHtml(r.note)}</div>` : ''}</div>
+      ${isAdmin ? `<button class="action-btn delete" onclick="deleteDailyLeave(${r.id})" title="Remove" style="padding:2px 6px">✕</button>` : ''}
+    </div>`).join('') + '</div>';
+}
+
+async function openDailyLeave() {
+  document.getElementById('dailyLeaveErr').style.display = 'none';
+  const users = await api('/api/users');
+  const sel = document.getElementById('dlUser');
+  sel.innerHTML = '<option value="">Select employee…</option>' + (Array.isArray(users) ? users : [])
+    .slice().sort((a,b) => (a.name||'').localeCompare(b.name||''))
+    .map(u => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join('');
+  document.getElementById('dlType').value = 'sick_leave';
+  document.getElementById('dlDate').value = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
+  document.getElementById('dlNote').value = '';
+  document.getElementById('dailyLeaveModal').classList.add('open');
+}
+
+async function saveDailyLeave() {
+  const err = document.getElementById('dailyLeaveErr'); err.style.display = 'none';
+  const user_id = document.getElementById('dlUser').value;
+  if (!user_id) { err.textContent = 'Select an employee'; err.style.display = 'block'; return; }
+  const r = await api('/api/daily-leave', 'POST', {
+    user_id, leave_type: document.getElementById('dlType').value,
+    leave_date: document.getElementById('dlDate').value, note: document.getElementById('dlNote').value.trim() });
+  if (r.error) { err.textContent = r.error; err.style.display = 'block'; return; }
+  closeModal('dailyLeaveModal');
+  showToast('✅ Leave update saved');
+  loadDailyLeave();
+}
+
+async function deleteDailyLeave(id) {
+  if (!await confirmDialog('Remove this leave update?', { title: 'Remove Update', okText: 'Remove', danger: true })) return;
+  const r = await api(`/api/daily-leave/${id}`, 'DELETE');
+  if (r.error) { showToast(r.error, 'error'); return; }
+  loadDailyLeave();
+}
+
 // ══════════════════════════════════════════════════════
 // FORMS — naam + link ki chhoti list. Click karte hi link naye tab me
 // khulta hai. Jaan-boojh kar itna hi simple hai — FMS jaisa koi Sheet-sync
@@ -1317,6 +1370,7 @@ async function loadDashboard() {
 
   loadDashFMS(); // fire-and-forget — sabse dheema hai (Google Sheets), isliye sabse pehle shuru
   if (!isPageDisabled('leaves')) loadLeaveToday(); // "Aaj kaun leave par hai" banner — sabko dikhta hai
+  loadDailyLeave(); // Admin ka daily leave update — sabko dikhta hai
 
   const [dDel, dChl] = await delChlPromise;
 
