@@ -214,6 +214,9 @@ async function _redirectInstallationToForm() {
 // INIT
 // ══════════════════════════════════════════════════════
 async function init() {
+  // "…/app?logout=1" — doosri site (jaise Installation ka Apps Script form) se
+  // Log out ka link yahin aata hai: session band karke login page par.
+  if (new URLSearchParams(location.search).has('logout')) { await logout(); return; }
   try {
     const token = localStorage.getItem('authToken');
     const headers = {'Content-Type': 'application/json'};
