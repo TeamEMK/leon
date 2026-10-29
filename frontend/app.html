@@ -1125,6 +1125,23 @@
   </div>
 </div>
 
+<!-- Kiosk — Dedicated Department wale users ko login par sirf ek form full-screen -->
+<div id="kioskView" style="display:none;position:fixed;inset:0;z-index:3000;background:var(--background);flex-direction:column">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--border)">
+    <div id="kioskTitle" style="font-size:15px;font-weight:600;color:var(--foreground);flex:1;min-width:160px"></div>
+    <select id="kioskLang" class="notranslate" onchange="kioskSetLanguage(this.value)" style="display:none;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Inter',sans-serif;background:var(--card)" title="Language"></select>
+    <a id="kioskOpenTab" class="btn btn-outline btn-sm" href="#" target="_blank" rel="noopener noreferrer">Open in new tab ↗</a>
+    <button class="btn btn-outline btn-sm" onclick="logout()">Log out</button>
+  </div>
+  <div id="kioskNative" style="display:none;flex:1;overflow:auto;padding:40px 16px;text-align:center">
+    <div style="font-size:42px">📋</div>
+    <div id="kioskNativeMsg" style="font-size:14px;color:var(--muted-foreground);margin:10px 0 18px"></div>
+    <button class="btn btn-primary" onclick="kioskOpenForm()">Fill the form</button>
+  </div>
+  <div id="google_translate_element" style="display:none"></div>
+  <iframe id="kioskFrame" style="flex:1;width:100%;border:0;background:#fff" allow="camera; microphone; geolocation"></iframe>
+</div>
+
 <!-- ══════════════════════════════════════
      FORMS — ADD/EDIT MODAL
 ══════════════════════════════════════ -->
@@ -1140,6 +1157,16 @@
     <div class="form-group">
       <label>Form Link <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(opens in a new tab when clicked)</span></label>
       <input type="url" id="formLink" placeholder="https://forms.google.com/…"/>
+    </div>
+    <div class="form-group">
+      <label>Dedicated Department <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(optional)</span></label>
+      <select id="formKioskDept"><option value="">— None (normal form) —</option></select>
+      <div style="font-size:11px;color:var(--muted-foreground);margin-top:4px">If set, users of this department (except Admin) see ONLY this form, full-screen, as soon as they log in.</div>
+    </div>
+    <div class="form-group">
+      <label>Use an in-app FMS form <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(optional — instead of a link)</span></label>
+      <select id="formFmsId"><option value="">— No, use the link above —</option></select>
+      <div style="font-size:11px;color:var(--muted-foreground);margin-top:4px">Opens that FMS's own "New Record" form inside the app. Answers go straight to its sheet, with a language switch; anything typed in another language is saved in English.</div>
     </div>
     <div class="modal-footer" style="justify-content:space-between">
       <button class="btn btn-outline" onclick="closeModal('formAddModal')">Cancel</button>

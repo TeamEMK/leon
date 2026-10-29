@@ -976,6 +976,7 @@ const {
   getSheetGid: _getSheetGid, forceCellNumber: _forceCellNumber,
 } = require('./lib/sheet-cols');
 const { detectSteps: _detectSteps } = require('./lib/fms-detect');
+const { toEnglish } = require('./lib/translate');
 
 // Boot par hi Google auth bana lo — pehli asli request tab tez chalti hai.
 prewarmGoogleAuth();
@@ -1130,6 +1131,22 @@ async function _canAccessFms(uid, fmsId, isAdmin) {
     `SELECT 1 FROM fms_step_doers fsd JOIN fms_steps s ON s.id=fsd.step_id
      WHERE s.fms_id=? AND fsd.user_id=? LIMIT 1`, [fmsId, uid]);
   return r.length > 0;
+}
+
+// Intake form (New Record) ke liye access: normal FMS access YA us form ka
+// "Dedicated Department" (forms.kiosk_department + forms.fms_id) — jaise
+// Installation team ko sirf apna intake form chahiye, FMS ka doer hona zaroori nahi.
+async function _kioskFmsAccess(uid, fmsId) {
+  try {
+    const [r] = await db.query(
+      `SELECT 1 FROM forms f JOIN users u ON u.id=?
+       WHERE f.fms_id=? AND f.kiosk_department IS NOT NULL
+         AND LOWER(TRIM(f.kiosk_department))=LOWER(TRIM(u.department)) LIMIT 1`, [uid, fmsId]);
+    return r.length > 0;
+  } catch (_) { return false; }
+}
+async function _canUseIntake(uid, fmsId, isAdmin) {
+  return (await _canAccessFms(uid, fmsId, isAdmin)) || (await _kioskFmsAccess(uid, fmsId));
 }
 
 // Startup par ek baar chalao. Fail ho to app band nahi karte — baaki modules
@@ -3983,7 +4000,7 @@ app.post('/api/fms-tasks/:fmsId/bulk-intake', requireAuth, async (req, res) => {
 app.get('/api/fms-tasks/:id/intake', requireAuth, async (req, res) => {
   try {
     const isAdmin = req.session.role === 'admin';
-    if (!await _canAccessFms(req.session.userId, req.params.id, isAdmin)) return res.status(403).json({ error: 'No access to this FMS' });
+    if (!await _canUseIntake(req.session.userId, req.params.id, isAdmin)) return res.status(403).json({ error: 'No access to this FMS' });
     const [rows] = await db.query('SELECT * FROM fms_sheets WHERE id=?', [req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: 'FMS not found' });
     const sheet = rows[0];
@@ -4012,7 +4029,7 @@ app.post('/api/fms-tasks/:fmsId/intake-upload', requireAuth,
   async (req, res) => {
   try {
     const isAdmin = req.session.role === 'admin';
-    if (!await _canAccessFms(req.session.userId, req.params.fmsId, isAdmin)) return res.status(403).json({ error: 'No access to this FMS' });
+    if (!await _canUseIntake(req.session.userId, req.params.fmsId, isAdmin)) return res.status(403).json({ error: 'No access to this FMS' });
     const folderId = extractDriveFolderId(process.env.GDRIVE_FMS_FOLDER_ID || process.env.GDRIVE_VIDEO_FOLDER_ID);
     if (!folderId) return res.status(500).json({ error: 'File upload is not configured — set GDRIVE_FMS_FOLDER_ID' });
     const mime = (req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
@@ -4070,7 +4087,7 @@ app.post('/api/fms-tasks/:fmsId/intake', requireAuth, async (req, res) => {
   try {
     const isAdmin = req.session.role === 'admin';
     const fmsId = req.params.fmsId;
-    if (!await _canAccessFms(req.session.userId, fmsId, isAdmin)) return res.status(403).json({ error: 'No access to this FMS' });
+    if (!await _canUseIntake(req.session.userId, fmsId, isAdmin)) return res.status(403).json({ error: 'No access to this FMS' });
     const [sheets] = await db.query('SELECT * FROM fms_sheets WHERE id=?', [fmsId]);
     if (!sheets[0]) return res.status(404).json({ error: 'FMS not found' });
     const sheet = sheets[0];
@@ -4078,12 +4095,21 @@ app.post('/api/fms-tasks/:fmsId/intake', requireAuth, async (req, res) => {
     try { config = JSON.parse(sheet.intake_config || 'null'); } catch (e) {}
     if (!config || !Array.isArray(config.fields) || !config.fields.length) return res.status(400).json({ error: 'Intake form not configured for this FMS' });
     // Record-creators restriction: agar list set hai to sirf wahi users (+ admin) new record bana sakte hain.
-    if (!isAdmin && Array.isArray(config.recordCreators) && config.recordCreators.length &&
+    if (!isAdmin && !(await _kioskFmsAccess(req.session.userId, fmsId)) && Array.isArray(config.recordCreators) && config.recordCreators.length &&
         !config.recordCreators.map(Number).includes(Number(req.session.userId))) {
       return res.status(403).json({ error: 'You are not allowed to add records for this FMS' });
     }
 
     const values = (req.body && typeof req.body.values === 'object' && req.body.values) ? req.body.values : {};
+
+    // Kiosk form: kisi bhi language me likha text sheet me ENGLISH me jaata hai.
+    // Sirf free-text fields translate hote hain (dropdown/date/number/file nahi).
+    if (req.body && req.body.translate === true) {
+      for (const f of config.fields) {
+        const isText = !f.type || f.type === 'text' || f.type === 'textarea';
+        if (isText && typeof values[f.col] === 'string') values[f.col] = await toEnglish(values[f.col]);
+      }
+    }
 
     const targetSheetId = config.targetSheetId || sheet.sheet_id;
     const targetTab = config.targetTab || sheet.sheet_name || 'Sheet1';
@@ -4136,7 +4162,7 @@ app.post('/api/fms-tasks/:fmsId/intake', requireAuth, async (req, res) => {
 app.post('/api/fms-tasks/:fmsId/intake-nextstep', requireAuth, async (req, res) => {
   try {
     const isAdmin = req.session.role === 'admin';
-    if (!await _canAccessFms(req.session.userId, req.params.fmsId, isAdmin)) return res.status(403).json({ error: 'No access to this FMS' });
+    if (!await _canUseIntake(req.session.userId, req.params.fmsId, isAdmin)) return res.status(403).json({ error: 'No access to this FMS' });
     const rowNum = parseInt(req.body?.row);
     const date = typeof req.body?.date === 'string' ? req.body.date.trim() : '';
     if (!rowNum || rowNum < 1) return res.status(400).json({ error: 'Invalid row' });
@@ -4236,7 +4262,7 @@ app.get('/api/fms-tasks/:fmsId/plan-pending', requireAuth, async (req, res) => {
 app.get('/api/fms-tasks/:fmsId/next-number', requireAuth, async (req, res) => {
   try {
     const isAdmin = req.session.role === 'admin';
-    if (!await _canAccessFms(req.session.userId, req.params.fmsId, isAdmin)) return res.status(403).json({ error: 'No access' });
+    if (!await _canUseIntake(req.session.userId, req.params.fmsId, isAdmin)) return res.status(403).json({ error: 'No access' });
     const col = String(req.query.col || '').toUpperCase();
     const idx = colToIdx(col);
     if (idx < 0) return res.json({ next: 1 });

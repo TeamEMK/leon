@@ -227,6 +227,10 @@ async function init() {
     // ye sirf isliye ki click karne par har baar error toast na mile.
     document.documentElement.classList.toggle('view-only', Number(ME.view_only) === 1);
 
+    // Dedicated-department user (jaise Installation) ko login par sirf uska form —
+    // baaki app unke liye khulta hi nahi.
+    if (await _maybeEnterKiosk()) return;
+
     if (ME.role === 'admin') {
       document.getElementById('nav-users').style.display = 'flex';
       document.getElementById('nav-mis').style.display = 'flex';
@@ -714,6 +718,90 @@ async function deleteDailyLeave(id) {
 // nahi. Add/Edit/Delete sirf Admin (button HTML me hi admin ke liye dikhta
 // hai), dekhna/kholna sab logged-in users kar sakte hain.
 // ══════════════════════════════════════════════════════
+// ── Kiosk: Dedicated Department wale users ko sirf ek form ──
+// Form par admin ne "Dedicated Department" set kiya ho aur user ka department
+// wahi ho (admin ko chhodkar) to login par sirf wahi form full-screen khulta hai.
+async function _maybeEnterKiosk() {
+  if (ME.role === 'admin' || !(ME.department || '').trim()) return false;
+  const forms = await api('/api/forms');
+  if (!Array.isArray(forms)) return false;
+  const dept = ME.department.trim().toLowerCase();
+  const f = forms.find(x => (x.kiosk_department || '').trim().toLowerCase() === dept);
+  if (!f) return false;
+  document.getElementById('kioskTitle').textContent = f.name;
+  document.getElementById('kioskView').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  if (f.fms_id) {
+    // In-app FMS form: native modal + language switch; answers saved in English.
+    _kioskFmsId = f.fms_id;
+    document.getElementById('kioskOpenTab').style.display = 'none';
+    document.getElementById('kioskFrame').style.display = 'none';
+    document.getElementById('kioskNative').style.display = 'block';
+    document.getElementById('kioskView').style.zIndex = '900'; // modals (1000) iske upar khule
+    _kioskInitLanguage();
+    kioskOpenForm();
+  } else {
+    document.getElementById('kioskOpenTab').href = f.link;
+    document.getElementById('kioskFrame').src = f.link;
+  }
+  return true;
+}
+
+// ── Kiosk native form: language switch (Google Translate) ──
+let _kioskFmsId = null;
+const KIOSK_LANGS = [['', 'English'], ['hi', 'हिन्दी (Hindi)'], ['bn', 'বাংলা (Bengali)'], ['te', 'తెలుగు (Telugu)'], ['mr', 'मराठी (Marathi)'],
+  ['ta', 'தமிழ் (Tamil)'], ['gu', 'ગુજરાતી (Gujarati)'], ['ur', 'اردو (Urdu)'], ['kn', 'ಕನ್ನಡ (Kannada)'], ['ml', 'മലയാളം (Malayalam)'],
+  ['or', 'ଓଡ଼ିଆ (Odia)'], ['pa', 'ਪੰਜਾਬੀ (Punjabi)'], ['as', 'অসমীয়া (Assamese)'], ['ne', 'नेपाली (Nepali)'], ['sd', 'سنڌي (Sindhi)'],
+  ['sa', 'संस्कृतम् (Sanskrit)'], ['mai', 'मैथिली (Maithili)'], ['doi', 'डोगरी (Dogri)'], ['gom', 'कोंकणी (Konkani)'],
+  ['mni-Mtei', 'ꯃꯩꯇꯩꯂꯣꯟ (Manipuri)'], ['lus', 'Mizo'], ['bho', 'भोजपुरी (Bhojpuri)']];
+
+function _kioskInitLanguage() {
+  const sel = document.getElementById('kioskLang');
+  sel.innerHTML = KIOSK_LANGS.map(([c, n]) => '<option value="' + c + '">' + n + '</option>').join('');
+  sel.style.display = '';
+  const st = document.createElement('style');
+  st.textContent = '.goog-te-banner-frame,.skiptranslate>iframe{display:none!important}body{top:0!important}#goog-gt-tt,.goog-tooltip{display:none!important}';
+  document.head.appendChild(st);
+  window.googleTranslateElementInit = function () {
+    new google.translate.TranslateElement({ pageLanguage: 'en', autoDisplay: false,
+      includedLanguages: KIOSK_LANGS.map(l => l[0]).filter(Boolean).join(',') }, 'google_translate_element');
+  };
+  const sc = document.createElement('script');
+  sc.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+  document.head.appendChild(sc);
+}
+
+function kioskSetLanguage(code) {
+  const combo = document.querySelector('select.goog-te-combo');
+  if (!combo) { showToast('Language list is still loading — try again in a moment', 'error'); return; }
+  combo.value = code;               // '' = original (English)
+  combo.dispatchEvent(new Event('change'));
+}
+
+function kioskOpenForm() {
+  document.getElementById('kioskNativeMsg').textContent = 'Fill in the form. You can choose your language from the top bar — your answers are saved in English.';
+  openNewRecord(_kioskFmsId);
+}
+
+async function _fillFormFmsSelect(selected) {
+  const sel = document.getElementById('formFmsId');
+  const list = await api('/api/fms');
+  const sheets = Array.isArray(list) ? list : [];
+  sel.innerHTML = '<option value="">— No, use the link above —</option>' +
+    sheets.map(x => '<option value="' + x.id + '">' + escapeHtml(x.fms_name || x.sheet_name) + '</option>').join('');
+  sel.value = selected ? String(selected) : '';
+}
+
+async function _fillKioskDeptSelect(selected) {
+  const sel = document.getElementById('formKioskDept');
+  const list = await api('/api/departments');
+  const depts = Array.isArray(list) ? list : [];
+  if (selected && !depts.some(d => d.toLowerCase() === selected.toLowerCase())) depts.push(selected);
+  sel.innerHTML = '<option value="">— None (normal form) —</option>' +
+    depts.map(d => '<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>').join('');
+  sel.value = selected || '';
+}
+
 async function loadForms() {
   const box = document.getElementById('formsContent');
   box.innerHTML = '<div style="padding:20px;color:var(--muted-foreground);font-size:13px;text-align:center">Loading…</div>';
@@ -741,8 +829,9 @@ async function loadForms() {
   const otherCards = _forms.map(f => `
       <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:10px">
         <div style="font-size:14px;font-weight:600;color:var(--foreground);word-break:break-word">📄 ${escapeHtml(f.name)}</div>
+        ${f.kiosk_department ? `<div style="font-size:11px;color:var(--muted-foreground)">🔒 Only for ${escapeHtml(f.kiosk_department)} department</div>` : ''}
         <div style="display:flex;gap:6px;margin-top:auto">
-          <a class="btn btn-primary btn-sm" style="flex:1;justify-content:center" href="${escapeHtml(f.link)}" target="_blank" rel="noopener noreferrer">Open ↗</a>
+          ${f.fms_id ? `<button class="btn btn-primary btn-sm" style="flex:1;justify-content:center" onclick="openNewRecord(${f.fms_id})">Open</button>` : `<a class="btn btn-primary btn-sm" style="flex:1;justify-content:center" href="${escapeHtml(f.link)}" target="_blank" rel="noopener noreferrer">Open ↗</a>`}
           ${isAdmin ? `<button class="action-btn edit" onclick="openEditForm(${f.id})" title="Edit">✏️</button>
           <button class="action-btn delete" onclick="deleteForm(${f.id})" title="Delete">🗑️</button>` : ''}
         </div>
@@ -968,6 +1057,8 @@ function openAddForm() {
   document.getElementById('formName').value = '';
   document.getElementById('formLink').value = '';
   document.getElementById('formAddErr').style.display = 'none';
+  _fillKioskDeptSelect('');
+  _fillFormFmsSelect('');
   document.getElementById('formAddModal').classList.add('open');
 }
 
@@ -980,6 +1071,8 @@ function openEditForm(id) {
   document.getElementById('formName').value = f.name;
   document.getElementById('formLink').value = f.link;
   document.getElementById('formAddErr').style.display = 'none';
+  _fillKioskDeptSelect(f.kiosk_department || '');
+  _fillFormFmsSelect(f.fms_id || '');
   document.getElementById('formAddModal').classList.add('open');
 }
 
@@ -988,11 +1081,13 @@ async function saveForm() {
   err.style.display = 'none';
   const name = document.getElementById('formName').value.trim();
   const link = document.getElementById('formLink').value.trim();
+  const kiosk_department = document.getElementById('formKioskDept').value;
+  const fms_id = document.getElementById('formFmsId').value || null;
   if (!name) { err.textContent = 'Form name is required'; err.style.display = 'block'; return; }
-  if (!/^https?:\/\//i.test(link)) { err.textContent = 'Link must start with http:// or https://'; err.style.display = 'block'; return; }
+  if (!fms_id && !/^https?:\/\//i.test(link)) { err.textContent = 'Enter a link starting with http:// or https://, or pick an in-app FMS form'; err.style.display = 'block'; return; }
   const r = _editFormId
-    ? await api(`/api/forms/${_editFormId}`, 'PUT', { name, link })
-    : await api('/api/forms', 'POST', { name, link });
+    ? await api(`/api/forms/${_editFormId}`, 'PUT', { name, link, kiosk_department, fms_id })
+    : await api('/api/forms', 'POST', { name, link, kiosk_department, fms_id });
   if (r.error) { err.textContent = r.error; err.style.display = 'block'; return; }
   closeModal('formAddModal');
   showToast(_editFormId ? 'Form updated!' : 'Form added!');
@@ -5496,7 +5591,7 @@ async function openNewRecord(fmsId) {
     const _cols = _newRecordConfig.fields.filter(f => f.type !== 'file').map(f => f.label || f.col);
     _bulkFmt.innerHTML = `Columns (in this order): <b>${_cols.map(escapeHtml).join(', ')}</b>. File columns are not included in the CSV — add them later from Edit Record.`;
     const _bf = document.getElementById('fmsBulkFile'); if (_bf) _bf.value = '';
-    _bulkSec.style.display = 'block';
+    _bulkSec.style.display = _kioskFmsId ? 'none' : 'block';   // kiosk me bulk CSV nahi
   }
   // Auto-number field (jaise Order No) → last+1 se prefill (editable). Blank sheet → 1.
   const autoField = _newRecordConfig.fields.find(f => f.auto);
@@ -5559,7 +5654,7 @@ async function submitNewRecord() {
       }
     }
     // Record TURANT bana do (file ka wait nahi) — isse 15s ka hang khatam
-    const r = await api(`/api/fms-tasks/${_newRecordFmsId}/intake`,'POST',{ values });
+    const r = await api(`/api/fms-tasks/${_newRecordFmsId}/intake`,'POST',{ values, translate: !!_kioskFmsId });
     if (r.error) { err.textContent = r.error; err.style.display='block'; return; }
     showToast(fileJobs.length ? '✅ Record created — file background me upload ho rahi…' : '✅ Record created!');
     // File(s) BACKGROUND me upload → link apne aap us cell me aa jaayega (await nahi)
@@ -5569,7 +5664,10 @@ async function submitNewRecord() {
     // Next step configured ho to plan-date wala phase 2 dikhao; warna band karo
     const ns = _newRecordConfig.nextStep;
     if (ns && ns.enabled && ns.planCol) _showNextStepPhase(r.row, ns);
-    else closeModal('newRecordModal');
+    else {
+      closeModal('newRecordModal');
+      if (_kioskFmsId) document.getElementById('kioskNativeMsg').textContent = '✅ Submitted successfully. Thank you! You can fill another response below.';
+    }
   } finally {
     if (!_nrInPhase2) { btn.disabled = false; btn.textContent = 'Create Record'; }
   }
