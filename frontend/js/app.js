@@ -206,7 +206,13 @@ async function _redirectInstallationToForm() {
   if (!Array.isArray(forms)) return false;               // forms na mile to normal app (user atke nahi)
   const f = forms.find(x => INSTALLATION_FORM_NAME.test(x.name || '') && /^https?:\/\//i.test(x.link || ''));
   if (!f) return false;
-  window.location.replace(f.link);
+  // Seedha Apps Script par bhejne ke bajaye app ka chhota page dikhao (Log out
+  // yahin rehta hai); form naye tab me khulta hai.
+  document.getElementById('kioskUser').textContent = ME.name;
+  document.getElementById('kioskTitle').textContent = f.name;
+  document.getElementById('kioskOpen').href = f.link;
+  document.getElementById('kioskView').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
   return true;
 }
 
@@ -230,7 +236,7 @@ async function init() {
     ME = await r.json();
     if (!ME || !ME.id) { window.location.replace('/'); return; }
 
-    // Installation department wale users ko login par sirf unka FMS form khulta
+    // Installation department wale users ko login par sirf unka FMS form dikhta
     // hai (baaki app nahi). Admin ko kabhi nahi; "?stay=1" laga ho to bhi nahi.
     if (await _redirectInstallationToForm()) return;
 

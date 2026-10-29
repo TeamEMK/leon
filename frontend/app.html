@@ -1128,6 +1128,24 @@
 <!-- ══════════════════════════════════════
      FORMS — ADD/EDIT MODAL
 ══════════════════════════════════════ -->
+<!-- Installation department ka landing page: sirf unka form (naye tab me khulta
+     hai) aur Log out. App ka baaki hissa unke liye nahi khulta. -->
+<div id="kioskView" style="display:none;position:fixed;inset:0;z-index:3000;background:var(--background);flex-direction:column">
+  <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--card);border-bottom:1px solid var(--border)">
+    <img src="logo.png" alt="" style="height:30px;border-radius:6px"/>
+    <div style="flex:1;font-size:14px;font-weight:600;color:var(--foreground)">Welcome, <span id="kioskUser"></span></div>
+    <button class="btn btn-outline btn-sm" onclick="logout()">Log out</button>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;max-width:420px;width:100%;text-align:center;box-shadow:var(--shadow-xs)">
+      <div style="font-size:44px">📋</div>
+      <div id="kioskTitle" style="font-size:17px;font-weight:700;color:var(--foreground);margin:10px 0 6px"></div>
+      <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:20px">Tap the button below to open the form and fill it in.</div>
+      <a id="kioskOpen" class="btn btn-primary" style="display:block;justify-content:center" href="#" target="_blank" rel="noopener noreferrer">Open Form ↗</a>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="formAddModal">
   <div class="modal" style="max-width:480px">
     <h3 id="formAddTitle">+ Add New Form</h3>
