@@ -227,10 +227,6 @@ async function init() {
     // ye sirf isliye ki click karne par har baar error toast na mile.
     document.documentElement.classList.toggle('view-only', Number(ME.view_only) === 1);
 
-    // Dedicated-department user (jaise Installation) ko login par sirf uska form —
-    // baaki app unke liye khulta hi nahi.
-    if (await _maybeEnterKiosk()) return;
-
     if (ME.role === 'admin') {
       document.getElementById('nav-users').style.display = 'flex';
       document.getElementById('nav-mis').style.display = 'flex';
@@ -718,34 +714,6 @@ async function deleteDailyLeave(id) {
 // nahi. Add/Edit/Delete sirf Admin (button HTML me hi admin ke liye dikhta
 // hai), dekhna/kholna sab logged-in users kar sakte hain.
 // ══════════════════════════════════════════════════════
-// ── Kiosk: Dedicated Department wale users ko sirf ek form ──
-// Form par admin ne "Dedicated Department" set kiya ho aur user ka department
-// wahi ho (admin ko chhodkar) to login par sirf wahi form full-screen khulta hai.
-async function _maybeEnterKiosk() {
-  if (ME.role === 'admin' || !(ME.department || '').trim()) return false;
-  const forms = await api('/api/forms');
-  if (!Array.isArray(forms)) return false;
-  const dept = ME.department.trim().toLowerCase();
-  const f = forms.find(x => (x.kiosk_department || '').trim().toLowerCase() === dept);
-  if (!f) return false;
-  document.getElementById('kioskTitle').textContent = f.name;
-  document.getElementById('kioskView').style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  document.getElementById('kioskOpenTab').href = f.link;
-  document.getElementById('kioskFrame').src = f.link;
-  return true;
-}
-
-async function _fillKioskDeptSelect(selected) {
-  const sel = document.getElementById('formKioskDept');
-  const list = await api('/api/departments');
-  const depts = Array.isArray(list) ? list : [];
-  if (selected && !depts.some(d => d.toLowerCase() === selected.toLowerCase())) depts.push(selected);
-  sel.innerHTML = '<option value="">— None (normal form) —</option>' +
-    depts.map(d => '<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>').join('');
-  sel.value = selected || '';
-}
-
 async function loadForms() {
   const box = document.getElementById('formsContent');
   box.innerHTML = '<div style="padding:20px;color:var(--muted-foreground);font-size:13px;text-align:center">Loading…</div>';
@@ -773,7 +741,6 @@ async function loadForms() {
   const otherCards = _forms.map(f => `
       <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:10px">
         <div style="font-size:14px;font-weight:600;color:var(--foreground);word-break:break-word">📄 ${escapeHtml(f.name)}</div>
-        ${f.kiosk_department ? `<div style="font-size:11px;color:var(--muted-foreground)">🔒 Only for ${escapeHtml(f.kiosk_department)} department</div>` : ''}
         <div style="display:flex;gap:6px;margin-top:auto">
           <a class="btn btn-primary btn-sm" style="flex:1;justify-content:center" href="${escapeHtml(f.link)}" target="_blank" rel="noopener noreferrer">Open ↗</a>
           ${isAdmin ? `<button class="action-btn edit" onclick="openEditForm(${f.id})" title="Edit">✏️</button>
@@ -1001,7 +968,6 @@ function openAddForm() {
   document.getElementById('formName').value = '';
   document.getElementById('formLink').value = '';
   document.getElementById('formAddErr').style.display = 'none';
-  _fillKioskDeptSelect('');
   document.getElementById('formAddModal').classList.add('open');
 }
 
@@ -1014,7 +980,6 @@ function openEditForm(id) {
   document.getElementById('formName').value = f.name;
   document.getElementById('formLink').value = f.link;
   document.getElementById('formAddErr').style.display = 'none';
-  _fillKioskDeptSelect(f.kiosk_department || '');
   document.getElementById('formAddModal').classList.add('open');
 }
 
@@ -1023,12 +988,11 @@ async function saveForm() {
   err.style.display = 'none';
   const name = document.getElementById('formName').value.trim();
   const link = document.getElementById('formLink').value.trim();
-  const kiosk_department = document.getElementById('formKioskDept').value;
   if (!name) { err.textContent = 'Form name is required'; err.style.display = 'block'; return; }
   if (!/^https?:\/\//i.test(link)) { err.textContent = 'Link must start with http:// or https://'; err.style.display = 'block'; return; }
   const r = _editFormId
-    ? await api(`/api/forms/${_editFormId}`, 'PUT', { name, link, kiosk_department })
-    : await api('/api/forms', 'POST', { name, link, kiosk_department });
+    ? await api(`/api/forms/${_editFormId}`, 'PUT', { name, link })
+    : await api('/api/forms', 'POST', { name, link });
   if (r.error) { err.textContent = r.error; err.style.display = 'block'; return; }
   closeModal('formAddModal');
   showToast(_editFormId ? 'Form updated!' : 'Form added!');

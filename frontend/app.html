@@ -1125,16 +1125,6 @@
   </div>
 </div>
 
-<!-- Kiosk — Dedicated Department wale users ko login par sirf ek form full-screen -->
-<div id="kioskView" style="display:none;position:fixed;inset:0;z-index:3000;background:var(--background);flex-direction:column">
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--border)">
-    <div id="kioskTitle" style="font-size:15px;font-weight:600;color:var(--foreground);flex:1;min-width:160px"></div>
-    <a id="kioskOpenTab" class="btn btn-outline btn-sm" href="#" target="_blank" rel="noopener noreferrer">Open in new tab ↗</a>
-    <button class="btn btn-outline btn-sm" onclick="logout()">Log out</button>
-  </div>
-  <iframe id="kioskFrame" style="flex:1;width:100%;border:0;background:#fff" allow="camera; microphone; geolocation"></iframe>
-</div>
-
 <!-- ══════════════════════════════════════
      FORMS — ADD/EDIT MODAL
 ══════════════════════════════════════ -->
@@ -1150,11 +1140,6 @@
     <div class="form-group">
       <label>Form Link <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(opens in a new tab when clicked)</span></label>
       <input type="url" id="formLink" placeholder="https://forms.google.com/…"/>
-    </div>
-    <div class="form-group">
-      <label>Dedicated Department <span style="color:var(--muted-foreground);font-weight:400;font-size:11px">(optional)</span></label>
-      <select id="formKioskDept"><option value="">— None (normal form) —</option></select>
-      <div style="font-size:11px;color:var(--muted-foreground);margin-top:4px">If set, users of this department (except Admin) see ONLY this form, full-screen, as soon as they log in.</div>
     </div>
     <div class="modal-footer" style="justify-content:space-between">
       <button class="btn btn-outline" onclick="closeModal('formAddModal')">Cancel</button>
