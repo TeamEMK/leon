@@ -194,6 +194,22 @@ let pendingTransferTaskIds = []; // task IDs that already have pending transfer
 // Dashboard date sort: 0=default(API order), 1=asc(oldest first), 2=desc(newest first)
 let _dashDateSortState = 0;
 
+// Installation team ka dedicated form. Naam/department badalna ho to sirf yahan.
+const INSTALLATION_DEPT = 'installation';
+const INSTALLATION_FORM_NAME = /site\s*supervisor.*installation/i;
+
+async function _redirectInstallationToForm() {
+  if (ME.role === 'admin') return false;
+  if ((ME.department || '').trim().toLowerCase() !== INSTALLATION_DEPT) return false;
+  if (new URLSearchParams(location.search).has('stay')) return false;
+  const forms = await api('/api/forms');
+  if (!Array.isArray(forms)) return false;               // forms na mile to normal app (user atke nahi)
+  const f = forms.find(x => INSTALLATION_FORM_NAME.test(x.name || '') && /^https?:\/\//i.test(x.link || ''));
+  if (!f) return false;
+  window.location.replace(f.link);
+  return true;
+}
+
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
@@ -210,6 +226,11 @@ async function init() {
     }
     ME = await r.json();
     if (!ME || !ME.id) { window.location.replace('/'); return; }
+
+    // Installation department wale users ko login par sirf unka FMS form khulta
+    // hai (baaki app nahi). Admin ko kabhi nahi; "?stay=1" laga ho to bhi nahi.
+    if (await _redirectInstallationToForm()) return;
+
     const initials = ME.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
     document.getElementById('sidebarName').textContent = ME.name;
     const roleLabel = ME.role==='admin' ? '👑 Admin' : ME.role==='hod' ? '🏢 HOD' : ME.role==='pc' ? '🖥️ PC' : '👤 Employee';
