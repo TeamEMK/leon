@@ -4445,6 +4445,15 @@ app.use((err, req, res, next) => {
 // Serverless par port par sunna nahi hota — Vercel har request khud function ko
 // deta hai (api/index.js `app` ko wahan pass karta hai). listen() wahan
 // bekaar bhi hai aur cold start ko dheema bhi karta hai.
+// MySQL (Hostinger): jo migrations abhi tak nahi lagi wo start par apne aap lag jaati
+// hain — shared hosting par terminal na ho tab bhi. Postgres (Railway) par Railway
+// ka preDeployCommand ye karta hai, isliye wahan kuch nahi badla. Band karna ho to
+// AUTO_MIGRATE=false.
+if (db.kind === 'mysql' && process.env.AUTO_MIGRATE !== 'false') {
+  require('../data/scripts/migrate').main({ embedded: true })
+    .catch(e => console.error('  ❌ Auto-migrate failed:', e.message));
+}
+
 if (!IS_SERVERLESS) {
   // 0.0.0.0 — container ke bahar se reachable hona zaroori hai. Node ka
   // default bhi yahi hai, par Railway par ye chup-chaap toot jaye to debug

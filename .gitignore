@@ -24,3 +24,6 @@ apps_script_proof_upload.gs
 # chahiye; base64 banakar Vercel ke env vars me daali jaati hain.
 creds/
 Aman_credentails.json
+
+# Hostinger/MySQL data export (asli data hota hai)
+export/

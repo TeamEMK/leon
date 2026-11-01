@@ -33,7 +33,9 @@ module.exports = function registerWeekPlanRoutes(app, ctx) {
       // MySQL me affectedRows batata tha (1 = insert, 2 = update). Postgres dono
       // par 1 deta hai, isliye xmax: naye row par wo 0 hota hai, update kiye gaye
       // row par nahi.
-      const action = (wpRows[0] && wpRows[0].inserted) ? 'INSERTED' : 'UPDATED';
+      // MySQL driver RETURNING hata deta hai; wahan affectedRows hi batata hai (1 = insert).
+      const wasInserted = db.kind === 'mysql' ? wpRows.affectedRows === 1 : !!(wpRows[0] && wpRows[0].inserted);
+      const action = wasInserted ? 'INSERTED' : 'UPDATED';
       console.log(`  📅 Week Plan ${action}: employee=${employeeId}, week=${startDate}, improvement_pct=${impPct}, by_hod=${finalHodId}`);
       res.json({ success: true, action: action.toLowerCase() });
     } catch (e) {

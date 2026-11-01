@@ -27,13 +27,15 @@ function pickDialect() {
   }
   const url = (process.env.DATABASE_URL || '').trim();
   if (/^mysql:\/\//i.test(url)) return 'mysql';
-  return 'postgres';
+  // Kuch bhi set na ho to jo driver is copy me hai wahi (Hostinger zip me sirf db-mysql.js hota hai)
+  return require('fs').existsSync(require('path').join(__dirname, 'db-postgres.js')) ? 'postgres' : 'mysql';
 }
 
 const DIALECT = pickDialect();
 
 let create = null;
 if (DIALECT === 'postgres') create = require('./db-postgres');
+if (DIALECT === 'mysql') create = require('./db-mysql');
 
 if (!create) {
   throw new Error(

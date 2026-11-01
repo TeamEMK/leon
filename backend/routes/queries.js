@@ -41,7 +41,7 @@ module.exports = function registerQueryRoutes(app, ctx) {
          JOIN users u ON u.id = q.user_id
          LEFT JOIN users a ON a.id = q.answered_by
          ${where}
-         ORDER BY (q.status='open') DESC, q.created_at DESC`, params);
+         ORDER BY (q.status='open') DESC, q.created_at DESC, q.id DESC`, params);
       res.json({ canAnswer, queries: rows });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error. Please try again.' }); }
   });

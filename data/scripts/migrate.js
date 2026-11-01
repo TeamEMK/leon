@@ -20,18 +20,12 @@ function pickDialect() {
   if (explicit === 'mysql') return 'mysql';
   if (explicit === 'postgres' || explicit === 'postgresql') return 'postgres';
   if (explicit) throw new Error(`DB_KIND "${explicit}" samajh nahi aaya — 'postgres' ya 'mysql' likho.`);
-  return /^mysql:\/\//i.test((process.env.DATABASE_URL || '').trim()) ? 'mysql' : 'postgres';
+  if (/^mysql:\/\//i.test((process.env.DATABASE_URL || '').trim())) return 'mysql';
+  return fs.existsSync(path.join(__dirname, '..', 'db-postgres.js')) ? 'postgres' : 'mysql';
 }
 
 const DIALECT = pickDialect();
 const dir = path.join(__dirname, '..', 'migrations', DIALECT);
-
-if (!fs.existsSync(dir)) {
-  console.error(`  ❌ ${path.relative(process.cwd(), dir)} nahi mila.`);
-  console.error(`     Har client copy sirf ek database ke saath aati hai — .env me`);
-  console.error(`     DB_KIND wahi rakho jo download karte waqt chuna tha.`);
-  process.exit(1);
-}
 
 // ── Dono dialect ke liye ek jaisa chhota interface ────
 // { connect, query(sql, params), begin, commit, rollback, tableCount, end }
@@ -105,7 +99,15 @@ async function openMysql() {
   };
 }
 
-(async () => {
+// embedded=true: server.js startup se bulaya gaya — fail hone par process band nahi karna,
+// sirf error throw karna hai (app chalti rehti hai, log me wajah dikhti hai).
+async function main({ embedded = false } = {}) {
+  const fail = (msg) => { if (embedded) throw new Error(msg); process.exit(1); };
+  if (!fs.existsSync(dir)) {
+    console.error(`  ❌ ${path.relative(process.cwd(), dir)} nahi mila.`);
+    console.error('     DB_KIND wahi rakho jis database ke saath ye copy aayi hai.');
+    return fail('migrations folder missing');
+  }
   const db = DIALECT === 'mysql' ? await openMysql() : await openPostgres();
   console.log(`  ${db.label} — data/migrations/${DIALECT}/`);
 
@@ -132,10 +134,15 @@ async function openMysql() {
         console.error('     Database drop karke khaali se dobara chalao.');
       }
       await db.end();
-      process.exit(1);
+      return fail(`${f}: ${e.message}`);
     }
   }
 
-  console.log(`\n  ${applied} migration lagi. Ab database me ${await db.tableCount()} tables hain.`);
+  console.log(`
+  ${applied} migration lagi. Ab database me ${await db.tableCount()} tables hain.`);
   await db.end();
-})().catch(e => { console.error('migrate failed:', e.message); process.exit(1); });
+  return { applied };
+}
+
+module.exports = { main };
+if (require.main === module) main().catch(e => { console.error('migrate failed:', e.message); process.exit(1); });
